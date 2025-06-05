@@ -1,0 +1,1 @@
+from .minio_service import minio_client, upload_file_to_minio, delete_file_from_minio # <-- ADDED delete_file_from_minio

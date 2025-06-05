@@ -1,0 +1,20 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+
+# VSCode settings
+.vscode/
+
+# Environment variables or secret files
+.env
+
+# System files
+.DS_Store
+Thumbs.db
+
+# MinIO data if any
+minio/data/
