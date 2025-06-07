@@ -1,18 +1,17 @@
 # E:\Marine_life\backend\app\main.py
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware  # <-- IMPORT THIS
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.db.database import create_db_and_tables
-from app.models import user # Ensures models are imported
-
-# --- Import the API v1 router ---
 from app.api.v1.api_router import api_v1_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Application startup...")
+    # This check is useful to avoid running create_db_and_tables in production
+    # if you manage migrations with Alembic.
     if settings.DEBUG:
         print("ASYNC: Attempting to create database tables...")
         await create_db_and_tables()
@@ -23,15 +22,17 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="API for uploading marine life media, community discussions, and data access.",
-    version="0.1.0",
+    version="1.0.0",
     lifespan=lifespan
 )
 
-# --- ADD THIS CORS MIDDLEWARE SECTION ---
-# This allows your frontend (running on localhost:3000) to talk to your backend.
-origins = [
-    "http://localhost:3000", # The origin of your React app
-]
+# --- REVISED CORS MIDDLEWARE SECTION ---
+# This new logic reads the allowed origins from your settings file,
+# which we will set in the Render environment.
+origins = []
+if settings.CORS_ORIGINS:
+    # This splits the string "http://url1.com,http://url2.com" into a list
+    origins.extend([origin.strip() for origin in settings.CORS_ORIGINS.split(",")])
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,7 +43,6 @@ app.add_middleware(
 )
 # --- END CORS MIDDLEWARE SECTION ---
 
-# --- Include the API v1 router ---
 app.include_router(api_v1_router, prefix=settings.API_V1_STR)
 
 @app.get("/")

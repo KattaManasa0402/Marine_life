@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Community Marine Life Monitoring Platform API"
     API_V1_STR: str = "/api/v1"
     DEBUG: bool = True # Set to False in production
-
+    CORS_ORIGINS: str = ""
     # PostgreSQL Database settings
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
