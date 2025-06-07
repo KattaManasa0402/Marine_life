@@ -18,3 +18,16 @@ Thumbs.db
 
 # MinIO data if any
 minio/data/
+# Environment variables
+backend/.env
+
+# Python
+__pycache__/
+*.pyc
+
+# VSCode
+.vscode/
+
+# Frontend
+frontend/node_modules/
+frontend/build/
