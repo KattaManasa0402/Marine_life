@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select # For SQLAlchemy 2.0 style SELECT statements
+from sqlalchemy.future import select
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone # Ensure timezone is imported for manual timestamp updates
 
@@ -201,3 +201,26 @@ async def update_media_item_ai_results(
     await db.commit()
     await db.refresh(db_media_item)
     return db_media_item
+
+# --- GET MediaItems by User ---
+async def get_media_items_by_user(db: AsyncSession, user_id: int, skip: int = 0, limit: int = 100):
+    """
+    Retrieve a list of media items for a specific user, with pagination.
+    
+    Args:
+        db: The asynchronous database session.
+        user_id: The ID of the user whose media items you want to retrieve.
+        skip: Number of records to skip (for pagination).
+        limit: Maximum number of records to return.
+        
+    Returns:
+        A list of MediaItemModel instances belonging to the specified user.
+    """
+    result = await db.execute(
+        select(MediaItemModel)
+        .filter(MediaItemModel.user_id == user_id)
+        .order_by(MediaItemModel.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()

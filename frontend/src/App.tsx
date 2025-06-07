@@ -1,40 +1,41 @@
-// E:\Marine_life\frontend\src\App.tsx
-import React from 'react'; // No useState, useEffect directly here anymore
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'; 
-
-// NEW: Import the MapPage component
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Header from './components/layout/Header';
+import Footer from './components/layout/Footer';
 import MapPage from './pages/MapPage';
-
-// Remove direct mapbox imports from App.tsx
-// import Map from 'react-map-gl'; 
-// import 'mapbox-gl/dist/mapbox-gl.css'; 
-// import api from './api/axios'; // No direct API call here either, MapPage handles it
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import UploadPage from './pages/UploadPage';
+import FeedPage from './pages/FeedPage';
+import MediaDetailPage from './pages/MediaDetailPage';
+import ProfilePage from './pages/ProfilePage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
   return (
     <Router>
-      <div className="h-screen w-screen flex flex-col">
-        <header className="bg-blue-800 text-white p-4 text-center text-2xl font-bold flex justify-between items-center">
-          <h1 className="flex-grow">Marine Life Monitoring Platform</h1>
-          <nav>
-            <Link to="/" className="text-white hover:text-gray-300 mx-2">Map</Link>
-            <Link to="/login" className="text-white hover:text-gray-300 mx-2">Login</Link>
-            <Link to="/register" className="text-white hover:text-gray-300 mx-2">Register</Link>
-          </nav>
-        </header>
-        
-        {/* The main content area where routes are rendered */}
-        <main className="flex-grow"> 
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <Routes>
-            <Route path="/" element={<MapPage />} /> {/* Render MapPage component */}
-            <Route path="/login" element={<div>Login Page (Coming Soon)</div>} />
-            <Route path="/register" element={<div>Register Page (Coming Soon)</div>} />
+            <Route path="/" element={<FeedPage />} />
+            <Route path="/map" element={<MapPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/media/:id" element={<MediaDetailPage />} />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/upload" element={
+              <ProtectedRoute>
+                <UploadPage />
+              </ProtectedRoute>
+            } />
           </Routes>
         </main>
-
-        <footer className="bg-gray-800 text-white p-2 text-center text-sm">
-          © 2025 Community Marine Life Monitoring
-        </footer>
+        <Footer />
       </div>
     </Router>
   );

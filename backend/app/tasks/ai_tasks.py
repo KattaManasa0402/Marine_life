@@ -1,63 +1,98 @@
-import time
-import random
-# import asyncio # Not strictly needed for sync sleep
+import json
+import requests
+from io import BytesIO
+from PIL import Image
+from datetime import datetime, timezone
 
+# --- NEW: Import from our dedicated sync_database file ---
+from app.db.sync_database import SyncSessionLocal
+from sqlalchemy import update
+
+import google.generativeai as genai
 from app.celery_app import celery_app
-from app.db.database import AsyncSessionLocal # Still need this for DB access
-from app.crud import crud_media
-import asyncio # Need this to run async DB operations from sync task
+from app.models.media import MediaItem
 
-# Change task to be synchronous
-@celery_app.task(name="tasks.process_media_for_ai_sync_test", bind=True) # Renamed for clarity
-def process_media_for_ai_sync_test(self, media_item_id: int, file_url: str): # No longer async
-    """
-    SYNC TEST Celery task to simulate AI processing and update the database.
-    """
-    print(f"SYNC TASK STARTED: Process AI for media_item_id: {media_item_id}, file_url: {file_url}")
+# ADVANCED PROMPT V2 (remains the same)
+PROMPT_V2 = """
+SYSTEM: You are a helpful and knowledgeable marine biologist assistant. Your task is to analyze images and identify marine life...
+... [The rest of the long prompt text] ...
+Now, analyze the following image.
+"""
 
-    processing_time = random.randint(3, 7)
-    print(f"SYNC TASK INFO: Simulating AI processing for {processing_time} seconds...")
-    time.sleep(processing_time) # Use time.sleep for sync tasks
-
-    species_prediction = f"SyncSimSpecies_{random.choice(['Coral_A', 'Fish_B', 'Kelp_C'])}"
-    health_prediction = f"SyncSimHealth_{random.choice(['Good', 'Moderate', 'Poor'])}"
-    confidence_score = round(random.uniform(0.65, 0.98), 4)
-    ai_model_version = "sync_sim_v1.1"
-    processing_status = "completed_sync_test"
-
-    print(f"SYNC TASK INFO: AI Processing complete for media_item_id: {media_item_id}.")
-    print(f"  Species: {species_prediction}, Health: {health_prediction}, Confidence: {confidence_score}")
-
-    # --- Update Database Record ---
-    # To run async database code from a synchronous Celery task:
-    async def update_db_async():
-        async with AsyncSessionLocal() as db:
-            print(f"SYNC TASK DB: Created DB session for media_item_id: {media_item_id}")
-            updated_item = await crud_media.update_media_item_ai_results(
-                db=db,
-                media_item_id=media_item_id,
-                species=species_prediction,
-                health=health_prediction,
-                confidence=confidence_score,
-                model_version=ai_model_version,
-                status=processing_status
-            )
-            if updated_item:
-                print(f"SYNC TASK DB: Successfully updated media_item_id: {media_item_id} in DB.")
-            else:
-                print(f"SYNC TASK DB ERROR: Failed to find or update media_item_id: {media_item_id} in DB.")
-    
+def update_db_sync_operation(media_item_id: int, ai_data: dict, status: str):
+    """A standard, synchronous function to update the database using its own isolated session."""
+    print(f"SYNC DB UPDATE: Attempting to update media_item_id: {media_item_id}")
+    db = SyncSessionLocal() # Get a session from our dedicated sync factory
     try:
-        asyncio.run(update_db_async()) # Run the async DB update logic
+        update_data = {
+            "species_ai_prediction": ai_data.get('species', 'Unknown'),
+            "health_status_ai_prediction": ai_data.get('health_status', 'Unknown'),
+            "ai_confidence_score": float(ai_data.get('confidence', 0.0)),
+            "ai_model_version": "gemini-1.5-flash-v4-sync", # New version name
+            "ai_processing_status": status,
+            "updated_at": datetime.now(timezone.utc)
+        }
+        stmt = (
+            update(MediaItem)
+            .where(MediaItem.id == media_item_id)
+            .values(**update_data)
+        )
+        db.execute(stmt)
+        db.commit()
+        print(f"SYNC DB UPDATE: Successfully committed update for media_item_id: {media_item_id}")
     except Exception as e:
-        print(f"SYNC TASK DB ERROR: Exception during DB update for media_item_id: {media_item_id} - {e}")
-        import traceback
-        traceback.print_exc()
-        processing_status = "failed_exception_in_db_update_sync_test"
+        print(f"SYNC DB UPDATE ERROR: Rolling back for media_item_id: {media_item_id} - {e}")
+        db.rollback()
+    finally:
+        db.close()
 
+@celery_app.task(name="tasks.process_media_with_gemini")
+def process_media_with_gemini(media_item_id: int, file_url: str):
+    """Celery task using a synchronous DB update for maximum reliability."""
+    print("\n--- RUNNING AI TASK WITH SYNC DATABASE HANDLER v4 ---\n")
+    
+    # AI analysis part
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    ai_results = {
+        "species": "Unknown",
+        "health_status": "Unknown",
+        "confidence": 0.0
+    }
+    final_status = "failed"
+    try:
+        response = requests.get(file_url, timeout=30)
+        response.raise_for_status()
+        image = Image.open(BytesIO(response.content))
+        ai_response = model.generate_content([PROMPT_V2, image])
+        cleaned_text = ai_response.text.strip().lstrip("```json").rstrip("```").strip()
+        ai_results_temp = json.loads(cleaned_text)
+        
+        # Ensure the AI results match the expected format for display
+        if ai_results_temp.get("is_marine_life_present") is False:
+            ai_results["species"] = "No Marine Life Detected"
+            ai_results["health_status"] = "N/A"
+        else:
+            ai_results["species"] = ai_results_temp.get("species", "Unknown")
+            ai_results["health_status"] = ai_results_temp.get("health_status", "Unknown")
+            ai_results["confidence"] = ai_results_temp.get("confidence", 0.0)
+        final_status = "completed"
+    except Exception as e:
+        print(f"ERROR in AI Task for media_item_id {media_item_id}: {e}")
+        final_status = "failed"
+
+    # Update the database with the AI results
+    update_db_sync_operation(media_item_id, ai_results, final_status)
+
+    # Return the results in a format that matches the UI
     return {
-        "media_item_id": media_item_id, 
-        "final_processing_status": processing_status,
-        "simulated_species": species_prediction,
-        "simulated_health": health_prediction
+        "media_item_id": media_item_id,
+        "final_status": final_status,
+        "ai_prediction": {
+            "species": ai_results["species"],
+            "health": ai_results["health_status"]
+        },
+        "community_validated": {
+            "species": "Not yet validated",  # Placeholder for community validation
+            "health": "Not yet validated"
+        }
     }

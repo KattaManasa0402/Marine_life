@@ -1,2 +1,3 @@
 from . import crud_user
-from . import crud_media # Ensure this line is present
+from . import crud_media
+from . import crud_validation_vote  # <-- ADD THIS LINE

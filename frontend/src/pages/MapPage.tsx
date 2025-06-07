@@ -1,99 +1,93 @@
-// E:\Marine_life\frontend\src\pages\MapPage.tsx
-import React, { useState, useEffect, useRef } from 'react'; // Added useRef
-import mapboxgl from 'mapbox-gl'; // NEW: Import mapbox-gl directly
-// Removed: import Map from 'react-map-gl';
-// Removed: import 'mapbox-gl/dist/mapbox-gl.css'; (already in index.html)
-
-import api from '../api/axios'; 
-
-// Set Mapbox access token globally for mapbox-gl (best practice)
-mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN || '';
+import React, { useState, useEffect } from 'react';
+import Map, { Marker, Popup, type MapLayerMouseEvent } from 'react-map-gl';
+import api from '../api/axios';
+import { MapDataPoint } from '../types';
+import { Link } from 'react-router-dom';
+import Spinner from '../components/common/Spinner';
 
 function MapPage() {
-  // Map instance reference
-  const mapContainer = useRef<HTMLDivElement>(null); // Ref for the map DOM element
-  const map = useRef<mapboxgl.Map | null>(null); // Ref for the mapboxgl.Map object
+  const [viewState, setViewState] = useState({
+    longitude: -20,
+    latitude: 30,
+    zoom: 2,
+  });
+  const [mapData, setMapData] = useState<MapDataPoint[]>([]);
+  const [selectedPin, setSelectedPin] = useState<MapDataPoint | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // State for current map center and zoom (optional, can be managed by mapboxgl directly)
-  const [lng, setLng] = useState(-100);
-  const [lat, setLat] = useState(40);
-  const [zoom, setZoom] = useState(3);
+  const MAPBOX_ACCESS_TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
 
-  const [backendStatus, setBackendStatus] = useState('Checking...');
-
-  // --- Backend Health Check (existing) ---
   useEffect(() => {
-    const checkBackend = async () => {
+    const fetchMapData = async () => {
       try {
-        const response = await api.get('/health');
-        setBackendStatus(response.data.message);
-        console.log('Backend Health Check:', response.data);
+        setLoading(true);
+        const response = await api.get<MapDataPoint[]>('/map/data');
+        setMapData(response.data.filter(p => p.latitude && p.longitude));
       } catch (error) {
-        console.error('Backend Health Check Failed:', error);
-        setBackendStatus('Backend Status: Offline or Error');
+        console.error('Failed to fetch map data', error);
+      } finally {
+        setLoading(false);
       }
     };
-    checkBackend();
+    fetchMapData();
   }, []);
 
-  // --- Mapbox GL JS Initialization (NEW) ---
-  useEffect(() => {
-    if (map.current) return; // Initialize map only once
-    if (mapContainer.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12', // stylesheet location
-        center: [lng, lat], // starting position [lng, lat]
-        zoom: zoom // starting zoom
-      });
-
-      // Add navigation control (zoom in/out, rotate)
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-      // Update state when map moves (optional, for controlled view)
-      map.current.on('move', () => {
-        if (map.current) {
-          setLng(parseFloat(map.current.getCenter().lng.toFixed(4)));
-          setLat(parseFloat(map.current.getCenter().lat.toFixed(4)));
-          setZoom(parseFloat(map.current.getZoom().toFixed(2)));
-        }
-      });
-    }
-
-    // Cleanup function: remove map on component unmount
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-    };
-  }, [lng, lat, zoom]); // Re-run if center/zoom changes (for controlled view)
-
-  // --- END Mapbox GL JS Initialization ---
-
-  // Basic check for Mapbox Access Token (now handled by mapboxgl.accessToken assignment)
-  if (!mapboxgl.accessToken) { // Check the global token
-    console.error(
-      'Mapbox Access Token is not set. Please set REACT_APP_MAPBOX_ACCESS_TOKEN in your .env.local file.',
-    );
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
-        <p className="text-red-500 text-lg">Mapbox Access Token Error. Check console.</p>
-      </div>
-    );
+  if (!MAPBOX_ACCESS_TOKEN) {
+    return <div className="p-4 text-red-500">Mapbox Access Token is not set in .env.local</div>;
   }
 
+  const handleMarkerClick = (e: any, pin: MapDataPoint) => {
+    const mapEvent = e as unknown as MapLayerMouseEvent;
+    mapEvent.originalEvent.stopPropagation();
+    setSelectedPin(pin);
+  };
+
   return (
-    <div className="flex-grow relative"> 
-      <div className="absolute top-0 left-0 bg-white p-2 m-2 rounded shadow z-10 text-sm">
-        Backend Status: {backendStatus}
-        <br />
-        Map Center: {lng}, {lat} | Zoom: {zoom} {/* Display current map state */}
-      </div>
-      {/* Map container div */}
-      <div ref={mapContainer} style={{ width: '100%', height: '100%' }} className="map-container" />
+    <div>
+        <h1 className="text-4xl font-bold mb-8 text-neutral border-b-4 border-secondary pb-2">Sightings Map</h1>
+        <div className="w-full h-[75vh] relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
+            {loading && (
+                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-20">
+                    <Spinner size="16" />
+                </div>
+            )}
+            <Map
+                {...viewState}
+                onMove={evt => setViewState(evt.viewState)}
+                mapboxAccessToken={MAPBOX_ACCESS_TOKEN}
+                style={{ width: '100%', height: '100%' }}
+                mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+            >
+                {mapData.map(pin => (
+                  <Marker key={`marker-${pin.id}`} longitude={pin.longitude} latitude={pin.latitude} anchor="bottom">
+                      <div className="cursor-pointer group" onClick={(e) => handleMarkerClick(e, pin)}>
+                          <div className={`w-3 h-3 rounded-full bg-accent ring-4 ring-accent/30 transition-all duration-300 group-hover:scale-150 ${selectedPin?.id === pin.id ? 'scale-150' : ''}`} />
+                      </div>
+                  </Marker>
+                ))}
+                {selectedPin && (
+                    <Popup
+                      longitude={selectedPin.longitude}
+                      latitude={selectedPin.latitude}
+                      onClose={() => setSelectedPin(null)}
+                      closeOnClick={false}
+                      anchor="top"
+                      offset={15}
+                      className="font-sans"
+                    >
+                        <div className="w-56">
+                            <img src={selectedPin.file_url} alt="sighting" className="w-full h-32 object-cover rounded-t-lg" />
+                            <div className="p-3">
+                              <h3 className="font-bold text-base text-primary truncate">{selectedPin.validated_species || selectedPin.species_prediction || 'Unknown'}</h3>
+                              <p className="text-sm text-gray-700">{selectedPin.validated_health || selectedPin.health_prediction || 'N/A'}</p>
+                              <Link to={`/media/${selectedPin.id}`} className="text-secondary hover:underline text-xs font-semibold mt-2 inline-block">View Details →</Link>
+                            </div>
+                        </div>
+                    </Popup>
+                )}
+            </Map>
+        </div>
     </div>
   );
 }
-
 export default MapPage;
