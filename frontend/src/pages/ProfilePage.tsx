@@ -1,106 +1,192 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
-import { MediaItem } from '../types';
-import api from '../api/axios';
+import { motion } from 'framer-motion';
 import Spinner from '../components/common/Spinner';
+import { FaUserCircle, FaStar, FaGlobe, FaTrophy, FaCompass, FaRegSadTear, FaCheckCircle, FaMapMarkerAlt } from 'react-icons/fa';
+import api from '../api/axios';
+import { MediaItem } from '../types';
+import { Link } from 'react-router-dom';
+import IconWrapper from '../utils/IconWrapper';
 
-const MediaCard = ({ item }: { item: MediaItem }) => (
-    <Link to={`/media/${item.id}`} className="bg-white rounded-xl shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 group">
-        <div className="h-40 overflow-hidden"><img src={item.file_url} alt={item.species_ai_prediction || 'Marine life'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /></div>
-        <div className="p-4">
-            <h3 className="font-bold text-md truncate group-hover:text-primary transition-colors">{item.validated_species || item.species_ai_prediction || "Awaiting Identification"}</h3>
-            <p className="text-xs text-gray-500 mt-1">Status: {item.validated_health_status || item.health_status_ai_prediction || 'N/A'}</p>
-        </div>
-    </Link>
-);
+const ProfilePage: React.FC = () => {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const [userSightings, setUserSightings] = useState<MediaItem[]>([]);
+  const [sightingsLoading, setSightingsLoading] = useState(true);
+  const [sightingsError, setSightingsError] = useState<string | null>(null);
 
-const ProfilePage = () => {
-    const { user } = useAuth();
-    const [myMedia, setMyMedia] = useState<MediaItem[]>([]);
-    const [loading, setLoading] = useState(true);
+  console.log("[ProfilePage] Component Render. user:", user ? user.username : "null", "isAuthenticated:", isAuthenticated, "authLoading:", authLoading);
 
-    useEffect(() => {
-        const fetchMyMedia = async () => {
-            if (user) {
-                try {
-                    const response = await api.get<MediaItem[]>('/media/user/me');
-                    setMyMedia(response.data);
-                } catch (error) {
-                    console.error("Failed to fetch user's media", error);
-                } finally {
-                    setLoading(false);
-                }
-            }
-        };
-        fetchMyMedia();
-    }, [user]);
+  useEffect(() => {
+    const fetchUserSightings = async () => {
+      if (user?.id) {
+        setSightingsLoading(true);
+        setSightingsError(null);
+        console.log("[ProfilePage] Attempting to fetch user sightings for user ID:", user.id);
+        try {
+          const response = await api.get<MediaItem[]>(`/media/user/${user.id}`);
+          setUserSightings(response.data);
+          console.log("[ProfilePage] Fetched user sightings:", response.data);
+        } catch (error) {
+          console.error('[ProfilePage] Failed to fetch user sightings:', error);
+          setSightingsError('Failed to load your sightings.');
+        } finally {
+          setSightingsLoading(false);
+          console.log("[ProfilePage] User sightings fetch completed. sightingsLoading:", false);
+        }
+      } else {
+        console.log("[ProfilePage] User ID not available, skipping sighting fetch.");
+        setSightingsLoading(false);
+      }
+    };
+    
+    if (!authLoading && isAuthenticated && user) {
+      fetchUserSightings();
+    } else if (!authLoading && !isAuthenticated) {
+        console.log("[ProfilePage] Not authenticated, not fetching sightings.");
+        setSightingsLoading(false);
+    }
 
-    if (!user) { return <div className="mt-16"><Spinner size="12" /></div>; }
+  }, [user, isAuthenticated, authLoading]);
 
-    return (
-        <div className="space-y-8">
-            <div>
-              <h1 className="text-4xl font-bold text-neutral">My Profile</h1>
-              <p className="text-gray-500 mt-1">Welcome back, {user.username}!</p>
-            </div>
+  if (authLoading) {
+    console.log("[ProfilePage] Displaying auth loading spinner.");
+    return <Spinner size="16" color="ocean-primary" />;
+  }
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Details & Contributions */}
-                <div className="lg:col-span-1 space-y-8">
-                    <div className="bg-white p-6 rounded-xl shadow-lg">
-                        <h2 className="text-2xl font-semibold mb-4 border-b pb-2 text-primary">Account Details</h2>
-                        <div className="space-y-3 text-sm">
-                            <p><strong>Username:</strong> {user.username}</p>
-                            <p><strong>Email:</strong> {user.email}</p>
-                            <p><strong>Member Since:</strong> {new Date(user.created_at).toLocaleDateString()}</p>
-                        </div>
+  if (!isAuthenticated) {
+    console.log("[ProfilePage] User is not authenticated, showing fallback message (should be handled by ProtectedRoute).");
+    return <div className="text-center text-ocean-accent-red py-12 text-xl">You must be logged in to view your profile.</div>;
+  }
+
+  if (!user) {
+    console.log("[ProfilePage] User object is null despite isAuthenticated being true. This is unexpected.");
+    return <div className="text-center text-ocean-accent-red py-12 text-xl">User data not found. Please log in again.</div>;
+  }
+
+  const badgeIcons: { [key: string]: React.ReactElement } = {
+    "First Sighting": <IconWrapper icon={<FaCompass className="text-ocean-primary" />} />,
+    "Community Contributor": <IconWrapper icon={<FaStar className="text-ocean-accent-gold" />} />,
+    "Global Explorer": <IconWrapper icon={<FaGlobe className="text-ocean-medium" />} />,
+    "Verified Expert": <IconWrapper icon={<FaCheckCircle className="text-ocean-primary" />} />,
+  };
+
+  const commonMotionProps = {
+    initial: "hidden",
+    animate: "visible",
+    variants: {
+      hidden: { opacity: 0, y: 30 },
+      visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+    }
+  };
+
+  return (
+    <motion.div {...commonMotionProps} className="py-8">
+      <motion.h1
+        initial={{ y: -30, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="text-5xl font-heading text-ocean-dark text-center mb-12 font-bold leading-tight"
+      >
+        Your <span className="text-ocean-primary">Profile</span>
+      </motion.h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* User Info Card */}
+        <motion.div
+          variants={commonMotionProps.variants}
+          initial="hidden"
+          animate="visible"
+          className="glass-card p-8 flex flex-col items-center text-center col-span-1 lg:col-span-1"
+        >
+          <IconWrapper icon={<FaUserCircle className="text-ocean-dark text-7xl mb-4" />} />
+          <h2 className="text-3xl font-heading text-ocean-dark font-bold mb-2">
+            {user.username}
+          </h2>
+          <p className="text-ocean-text-light text-md">{user.email}</p>
+          <div className="mt-6 flex items-center gap-2 text-ocean-dark font-semibold text-xl">
+            <IconWrapper icon={<FaTrophy className="text-ocean-accent-gold" />} /> Points: {user.points}
+          </div>
+
+          <div className="mt-8 w-full">
+            <h3 className="text-xl font-heading text-ocean-dark font-bold mb-4">Your Badges</h3>
+            {user.badges && user.badges.length > 0 ? (
+              <div className="flex flex-wrap justify-center gap-4">
+                {user.badges.map((badge, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: index * 0.1, type: "spring", stiffness: 200, damping: 10 }}
+                    className="glass-card p-4 flex flex-col items-center text-sm font-semibold text-ocean-text-dark w-32 h-32 justify-center"
+                  >
+                    <div className="text-4xl mb-2">
+                      {badgeIcons[badge] || <IconWrapper icon={<FaStar className="text-ocean-primary" />} />}
                     </div>
+                    {badge}
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-ocean-text-light text-sm">No badges earned yet. Keep exploring!</p>
+            )}
+          </div>
+        </motion.div>
 
-                    <div className="bg-white p-6 rounded-xl shadow-lg">
-                        <h2 className="text-2xl font-semibold mb-4 border-b pb-2 text-primary">My Contributions</h2>
-                        <div className="text-center">
-                            <p className="text-lg text-gray-600">Total Score</p>
-                            <p className="font-bold text-6xl text-accent my-2">{user.score}</p>
-                        </div>
-                        <div className="mt-6">
-                            <h3 className="text-lg text-center font-bold mb-3">My Badges</h3>
-                            {user.earned_badges.length > 0 ? (
-                                <div className="flex flex-wrap justify-center gap-3">
-                                    {user.earned_badges.map(badge => (
-                                        <div key={badge} className="bg-info bg-opacity-30 text-primary font-semibold px-4 py-2 rounded-full shadow-sm text-sm">
-                                            🎖️ {badge}
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-center text-gray-500 italic">No badges earned yet. Keep contributing!</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Column: Uploads */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
-                    <h2 className="text-2xl font-semibold mb-4 border-b pb-2 text-primary">My Uploaded Sightings</h2>
-                    {loading ? (
-                        <Spinner />
-                    ) : myMedia.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {myMedia.map(item => <MediaCard key={item.id} item={item} />)}
-                        </div>
-                    ) : (
-                        <div className="text-center p-8 border-2 border-dashed rounded-lg">
-                            <p className="text-gray-500">You haven't uploaded any sightings yet.</p>
-                            <Link to="/upload" className="mt-4 inline-block bg-accent hover:bg-opacity-90 text-white font-bold py-2 px-4 rounded-lg">
-                                Upload your first one!
-                            </Link>
-                        </div>
-                    )}
-                </div>
-            </div>
+        {/* User Sightings List */}
+        <div className="col-span-1 lg:col-span-2">
+          <motion.div
+            variants={commonMotionProps.variants}
+            initial="hidden"
+            animate="visible"
+            transition={{ delay: 0.2 }}
+            className="glass-card p-8"
+          >
+            <h3 className="text-2xl font-heading text-ocean-dark font-bold mb-6 text-center">Your Recent Sightings</h3>
+            {sightingsLoading ? (
+              <Spinner size="12" color="ocean-primary" />
+            ) : sightingsError ? (
+              <div className="text-center text-ocean-accent-red text-md">
+                <IconWrapper icon={<FaRegSadTear className="inline-block mr-2 text-2xl" />} /> {sightingsError}
+              </div>
+            ) : userSightings.length === 0 ? (
+              <p className="text-center text-ocean-text-light text-md">You haven't uploaded any sightings yet. Start contributing!</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {userSightings.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    className="glass-card p-0 overflow-hidden group hover:scale-[1.02] transition-transform duration-300"
+                  >
+                    <Link to={`/media/${item.id}`} className="block">
+                      <img
+                        src={item.file_url}
+                        alt={item.species_ai_prediction || 'Marine life'}
+                        className="w-full h-48 object-cover rounded-t-xl transform group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="p-4">
+                        <h4 className="font-semibold text-lg font-heading text-ocean-dark truncate">
+                          {item.validated_species || item.species_ai_prediction || 'Analyzing...'}
+                        </h4>
+                        <p className="text-sm text-ocean-text-light mt-1">
+                          Health: {item.validated_health || item.health_status_ai_prediction || 'N/A'}
+                        </p>
+                        <p className="text-xs text-ocean-text-light flex items-center gap-1">
+                          <IconWrapper icon={<FaMapMarkerAlt />} /> {item.latitude?.toFixed(2)}, {item.longitude?.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-ocean-text-light">
+                          Uploaded: {new Date(item.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.div>
         </div>
-    );
+      </div>
+    </motion.div>
+  );
 };
 
 export default ProfilePage;

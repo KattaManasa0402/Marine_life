@@ -1,24 +1,30 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import Spinner from '../common/Spinner';
 
-// This explicit return type declaration is the fix for the TS2786 error.
-const ProtectedRoute = ({ children }: { children: JSX.Element }): React.ReactElement => {
-  const { user, isLoading } = useAuth();
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
+  console.log("[ProtectedRoute] isAuthenticated:", isAuthenticated, "isLoading:", isLoading, "Path:", location.pathname);
+
   if (isLoading) {
-    // This is a valid JSX element, satisfying one return path.
-    return <div className="w-full text-center p-10 font-semibold">Loading User...</div>;
+    console.log("[ProtectedRoute] Showing spinner (loading auth state).");
+    return <Spinner size="16" color="ocean-primary" />;
   }
 
-  if (!user) {
-    // The <Navigate> component is a valid JSX element, satisfying the second path.
+  if (!isAuthenticated) {
+    console.log("[ProtectedRoute] Not authenticated, redirecting to login. From:", location.pathname);
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // The children are guaranteed to be a JSX element, satisfying the final path.
-  return children;
+  console.log("[ProtectedRoute] Authenticated, rendering children.");
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

@@ -4,7 +4,6 @@ from typing import List, Optional, Union
 from datetime import datetime, timezone
 from app.models.validation_vote import ValidationVote as ValidationVoteModel
 from app.schemas.validation_vote import ValidationVoteCreate, ValidationVoteUpdate
-from app.services import validation_service  # <-- IMPORT THE VALIDATION SERVICE
 
 async def get_vote_by_media_and_user(
     db: AsyncSession, media_item_id: int, user_id: int

@@ -1,124 +1,223 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import { FaUpload, FaMapMarkerAlt, FaSpinner } from 'react-icons/fa';
+import IconWrapper from '../utils/IconWrapper';
 
-const UploadPage = () => {
-    const [file, setFile] = useState<File | null>(null);
-    const [latitude, setLatitude] = useState('');
-    const [longitude, setLongitude] = useState('');
-    const [description, setDescription] = useState('');
-    const [isUploading, setIsUploading] = useState(false);
-    const [isDetectingLocation, setIsDetectingLocation] = useState(false);
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
-    const navigate = useNavigate();
-    const { fetchUser } = useAuth();
+const UploadPage: React.FC = () => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [description, setDescription] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const navigate = useNavigate();
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
-        }
-    };
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      if (event.target.files[0].size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error('File size exceeds 5MB limit.');
+        setSelectedFile(null);
+        return;
+      }
+      setSelectedFile(event.target.files[0]);
+    } else {
+      setSelectedFile(null);
+    }
+  };
 
-    const handleDetectLocation = () => {
-        if (!navigator.geolocation) {
-            setError("Geolocation is not supported by your browser.");
-            return;
-        }
-        setIsDetectingLocation(true);
-        setError('');
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                setLatitude(position.coords.latitude.toFixed(6));
-                setLongitude(position.coords.longitude.toFixed(6));
-                setIsDetectingLocation(false);
-            },
-            () => {
-                setError("Unable to retrieve your location. Please check your browser's location permissions.");
-                setIsDetectingLocation(false);
-            }
-        );
-    };
+  const handleLocationDetection = () => {
+    setIsLocating(true);
+    toast.loading('Detecting location...', { id: 'location-toast' });
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLatitude(position.coords.latitude);
+          setLongitude(position.coords.longitude);
+          toast.success('Location detected!', { id: 'location-toast' });
+          setIsLocating(false);
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          toast.error('Failed to detect location.', { id: 'location-toast' });
+          setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      toast.error('Geolocation is not supported by your browser.', { id: 'location-toast' });
+      setIsLocating(false);
+    }
+  };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!file) {
-            setError('Please select an image file to upload.');
-            return;
-        }
-        setError('');
-        setSuccess('');
-        setIsUploading(true);
-        const formData = new FormData();
-        formData.append('file', file);
-        if (latitude) formData.append('latitude', latitude);
-        if (longitude) formData.append('longitude', longitude);
-        if (description) formData.append('description', description);
-        try {
-            const response = await api.post('/media/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
-            await fetchUser();
-            setSuccess('Upload successful! Redirecting...');
-            setTimeout(() => {
-                navigate(`/media/${response.data.id}`);
-            }, 1500);
-        } catch (err: any) {
-            setError(err.response?.data?.detail || 'Upload failed. Please try again.');
-            setIsUploading(false);
-        }
-    };
-    
-    const FormInput = ({ id, label, ...props }: any) => (
-      <div>
-        <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-        <input id={id} {...props} className="block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
-      </div>
-    );
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedFile) {
+      toast.error('Please select an image to upload.');
+      return;
+    }
 
-    return (
-        <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-            <h1 className="text-3xl font-bold mb-6 text-center text-primary">Upload a New Sighting</h1>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Image File*</label>
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                        <div className="space-y-1 text-center">
-                            <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
-                            <div className="flex text-sm text-gray-600"><label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-focus focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary"><span>Upload a file</span><input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} required accept="image/*" /></label><p className="pl-1">or drag and drop</p></div>
-                            <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                        </div>
-                    </div>
-                     {file && <p className="text-sm text-green-600 mt-2 font-semibold">Selected: {file.name}</p>}
-                </div>
+    setIsLoading(true);
+    const uploadToast = toast.loading('Uploading sighting...', { duration: 0 });
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      if (description) formData.append('description', description);
+      if (latitude !== null) formData.append('latitude', latitude.toString());
+      if (longitude !== null) formData.append('longitude', longitude.toString());
 
-                <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <label className="block text-sm font-medium text-gray-700">Location (Optional)</label>
-                        <button type="button" onClick={handleDetectLocation} disabled={isDetectingLocation} className="bg-info bg-opacity-40 hover:bg-opacity-60 text-primary text-xs font-bold py-1 px-3 rounded-full disabled:opacity-50 disabled:cursor-wait">
-                            {isDetectingLocation ? 'Detecting...' : '📍 Detect My Location'}
-                        </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormInput id="latitude" label="Latitude" type="number" step="any" value={latitude} onChange={(e: any) => setLatitude(e.target.value)} placeholder="e.g., 26.3351" />
-                        <FormInput id="longitude" label="Longitude" type="number" step="any" value={longitude} onChange={(e: any) => setLongitude(e.target.value)} placeholder="e.g., -80.0728" />
-                    </div>
-                </div>
+      const response = await api.post('/media/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-                <div>
-                   <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description (Optional)</label>
-                    <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Describe the sighting, location, or behavior..." className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
-                </div>
-                
-                {error && <div className="p-3 text-center bg-red-100 text-error font-semibold rounded-md">{error}</div>}
-                {success && <div className="p-3 text-center bg-green-100 text-success font-semibold rounded-md">{success}</div>}
-                
-                <button type="submit" disabled={isUploading || success !== ''} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-gray-400 disabled:cursor-not-allowed">
-                    {isUploading ? 'Uploading...' : 'Submit Sighting'}
-                </button>
-            </form>
+      toast.success('Sighting uploaded successfully! AI analysis pending.', { id: uploadToast });
+      navigate(`/media/${response.data.id}`);
+    } catch (error: any) {
+      console.error('Upload failed:', error.response?.data || error.message);
+      toast.error(error.response?.data?.detail || 'Upload failed. Please try again.', { id: uploadToast });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="flex justify-center items-center py-12 min-h-[calc(100vh-200px)]"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+        className="glass-card w-full max-w-2xl p-8 relative overflow-hidden"
+      >
+        <div className="floating-bubble floating-bubble-medium top-1/4 left-1/4 animate-[bubble-float-1]" style={{'--rand-x': '20px'} as React.CSSProperties}></div>
+        <div className="floating-bubble floating-bubble-small bottom-1/2 right-1/4 animate-[bubble-float-2]" style={{'--rand-x': '-30px'} as React.CSSProperties}></div>
+
+        <div className="text-center relative z-10">
+          <h2 className="text-4xl font-heading text-ocean-dark font-bold">Share Your Sighting</h2>
+          <p className="mt-2 text-ocean-text-light text-lg">Help us monitor marine life by uploading an image</p>
         </div>
-    );
+
+        <form onSubmit={handleSubmit} className="mt-8 space-y-6 relative z-10">
+          <div>
+            <label htmlFor="file-upload" className="block text-ocean-text-dark text-lg font-semibold mb-2">
+              Upload Image
+            </label>
+            <div className="flex items-center justify-center w-full">
+              <label
+                htmlFor="file-upload"
+                className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-ocean-medium rounded-lg cursor-pointer bg-ocean-light hover:bg-ocean-light/70 transition-colors duration-300"
+              >
+                {selectedFile ? (
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <img
+                      src={URL.createObjectURL(selectedFile)}
+                      alt="Preview"
+                      className="max-h-32 object-contain rounded-md"
+                    />
+                    <p className="mt-2 text-sm text-ocean-text-dark">{selectedFile.name}</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <IconWrapper icon={<FaUpload className="w-10 h-10 text-ocean-primary mb-3" />} />
+                    <p className="mb-2 text-sm text-ocean-text-light">
+                      <span className="font-semibold">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-ocean-text-light">JPG, PNG, GIF (MAX. 5MB)</p>
+                  </div>
+                )}
+                <input id="file-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="description" className="block text-ocean-text-dark text-lg font-semibold mb-2">
+              Description (Optional)
+            </label>
+            <motion.textarea
+              whileFocus={{ scale: 1.01 }}
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              className="input-field resize-none"
+              placeholder="E.g., observed near coral reefs, unique behavior..."
+            ></motion.textarea>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label htmlFor="latitude" className="block text-ocean-text-dark text-lg font-semibold mb-2">
+                Latitude (Optional)
+              </label>
+              <motion.input
+                whileFocus={{ scale: 1.01 }}
+                id="latitude"
+                type="number"
+                step="any"
+                value={latitude === null ? '' : latitude}
+                onChange={(e) => setLatitude(parseFloat(e.target.value) || null)}
+                className="input-field"
+                placeholder="e.g., 34.0522"
+              />
+            </div>
+            <div className="flex-1">
+              <label htmlFor="longitude" className="block text-ocean-text-dark text-lg font-semibold mb-2">
+                Longitude (Optional)
+              </label>
+              <motion.input
+                whileFocus={{ scale: 1.01 }}
+                id="longitude"
+                type="number"
+                step="any"
+                value={longitude === null ? '' : longitude}
+                onChange={(e) => setLongitude(parseFloat(e.target.value) || null)}
+                className="input-field"
+                placeholder="e.g., -118.2437"
+              />
+            </div>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            type="button"
+            onClick={handleLocationDetection}
+            disabled={isLocating}
+            className="btn-secondary w-full flex items-center justify-center gap-2"
+          >
+            {isLocating ? (
+              <><IconWrapper icon={<FaSpinner className="animate-spin" />} /> Detecting Location...</>
+            ) : (
+              <><IconWrapper icon={<FaMapMarkerAlt />} /> Detect My Location</>
+            )}
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            type="submit"
+            disabled={isLoading || !selectedFile}
+            className="btn-primary w-full flex items-center justify-center gap-2 mt-6"
+          >
+            {isLoading ? (
+              <><IconWrapper icon={<FaSpinner className="animate-spin" />} /> Uploading...</>
+            ) : (
+              <><IconWrapper icon={<FaUpload />} /> Submit Sighting</>
+            )}
+          </motion.button>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
 };
+
 export default UploadPage;

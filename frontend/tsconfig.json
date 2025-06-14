@@ -18,17 +18,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx",
-
-    // ================== THE FIX IS HERE ==================
-    // This tells TypeScript to ONLY look for type definitions in these specific
-    // directories. It prevents it from getting confused by scanning the entire
-    // node_modules tree.
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ]
-    // =====================================================
+    "jsx": "react-jsx", // This must be exactly "react-jsx" and appear only once.
+    "baseUrl": "src"
   },
   "include": [
     "src"

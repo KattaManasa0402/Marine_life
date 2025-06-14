@@ -1,98 +1,176 @@
+# E:\Marine_life\backend\app\tasks\ai_tasks.py
+
 import json
 import requests
 from io import BytesIO
 from PIL import Image
 from datetime import datetime, timezone
-
-# --- NEW: Import from our dedicated sync_database file ---
-from app.db.sync_database import SyncSessionLocal
 from sqlalchemy import update
+from sqlalchemy.exc import SQLAlchemyError
 
+from app.db.sync_database import SyncSessionLocal
 import google.generativeai as genai
 from app.celery_app import celery_app
 from app.models.media import MediaItem
+from app.core.config import settings
 
-# ADVANCED PROMPT V2 (remains the same)
-PROMPT_V2 = """
-SYSTEM: You are a helpful and knowledgeable marine biologist assistant. Your task is to analyze images and identify marine life...
-... [The rest of the long prompt text] ...
-Now, analyze the following image.
+# NEW, V3 PROMPT for Google Gemini AI - More detailed and structured
+PROMPT_V3 = """
+SYSTEM: You are an expert marine biologist AI. Your task is to conduct a detailed analysis of the provided image of marine life.
+Your response MUST be a single, valid JSON object and nothing else. Do not include markdown formatting like ```json.
+
+Follow these steps for your analysis:
+1.  **Initial Assessment:** Briefly think about what you see in the image. Is it clear? What is the main subject?
+2.  **Species Identification:** Identify the most prominent marine species. If you are uncertain, provide your best guess and state your uncertainty. If multiple species are present, identify the primary one and list others.
+3.  **Health & Condition Analysis:** Assess the visible health of the primary species. Look for signs of disease (lesions, discoloration), injury (scars, damaged fins), stress (bleaching in corals), or normal behavior.
+4.  **Environmental Context:** Analyze the surrounding habitat. Note the water clarity, substrate (sandy, rocky, coral reef), and any visible flora or other fauna.
+5.  **Confidence & Justification:** Provide a confidence score for your identification and a brief justification for your conclusions based on visual evidence.
+
+Now, provide your final analysis in the following JSON format:
+
+{
+  "is_marine_life_present": boolean,
+  "primary_species": {
+    "scientific_name": "string",
+    "common_name": "string",
+    "identification_confidence": float,
+    "justification": "string"
+  },
+  "health_assessment": {
+    "status": "string",
+    "observations": "string"
+  },
+  "environmental_context": {
+    "habitat_type": "string",
+    "water_clarity": "string",
+    "notes": "string"
+  },
+  "other_detected_species": ["string"],
+  "ai_model_version": "gemini-1.5-pro-v1-task"
+}
+
+If no marine life is detected, the JSON should be:
+{
+  "is_marine_life_present": false,
+  "primary_species": null,
+  "health_assessment": null,
+  "environmental_context": null,
+  "other_detected_species": [],
+  "ai_model_version": "gemini-1.5-pro-v1-task"
+}
 """
 
 def update_db_sync_operation(media_item_id: int, ai_data: dict, status: str):
-    """A standard, synchronous function to update the database using its own isolated session."""
-    print(f"SYNC DB UPDATE: Attempting to update media_item_id: {media_item_id}")
-    db = SyncSessionLocal() # Get a session from our dedicated sync factory
+    """
+    Synchronous database operation to update MediaItem record with detailed AI results.
+    """
+    db = SyncSessionLocal()
     try:
+        # Safely extract data from the new, richer JSON structure
+        primary_species = ai_data.get('primary_species', {}) or {}
+        health = ai_data.get('health_assessment', {}) or {}
+        env = ai_data.get('environmental_context', {}) or {}
+
         update_data = {
-            "species_ai_prediction": ai_data.get('species', 'Unknown'),
-            "health_status_ai_prediction": ai_data.get('health_status', 'Unknown'),
-            "ai_confidence_score": float(ai_data.get('confidence', 0.0)),
-            "ai_model_version": "gemini-1.5-flash-v4-sync", # New version name
             "ai_processing_status": status,
-            "updated_at": datetime.now(timezone.utc)
+            "updated_at": datetime.now(timezone.utc),
+            "ai_model_version": ai_data.get("ai_model_version", "gemini-1.5-pro-v1-task-fallback"),
+
+            # Map to new detailed fields
+            "ai_primary_species_name": primary_species.get("common_name"),
+            "ai_primary_species_scientific": primary_species.get("scientific_name"),
+            "ai_confidence_score": float(primary_species.get('identification_confidence', 0.0)),
+            "ai_health_status": health.get("status"),
+            "ai_health_observations": health.get("observations"),
+            "ai_habitat_type": env.get("habitat_type"),
+            "ai_environmental_notes": env.get("notes"),
+            "ai_other_species_detected": ai_data.get("other_detected_species", []),
+            
+            # Update deprecated fields for backward compatibility (optional but good practice)
+            "species_ai_prediction": primary_species.get("common_name", "N/A"),
+            "health_status_ai_prediction": health.get("status", "N/A")
         }
-        stmt = (
-            update(MediaItem)
-            .where(MediaItem.id == media_item_id)
-            .values(**update_data)
-        )
+        
+        stmt = update(MediaItem).where(MediaItem.id == media_item_id).values(**update_data)
         db.execute(stmt)
         db.commit()
-        print(f"SYNC DB UPDATE: Successfully committed update for media_item_id: {media_item_id}")
-    except Exception as e:
-        print(f"SYNC DB UPDATE ERROR: Rolling back for media_item_id: {media_item_id} - {e}")
+        print(f"MediaItem {media_item_id} updated successfully with DETAILED AI results and status '{status}'.")
+    except SQLAlchemyError as e:
         db.rollback()
+        print(f"Database error updating MediaItem {media_item_id}: {e}")
+    except Exception as e:
+        print(f"Unexpected error in update_db_sync_operation for MediaItem {media_item_id}: {e}")
     finally:
         db.close()
 
-@celery_app.task(name="tasks.process_media_with_gemini")
-def process_media_with_gemini(media_item_id: int, file_url: str):
-    """Celery task using a synchronous DB update for maximum reliability."""
-    print("\n--- RUNNING AI TASK WITH SYNC DATABASE HANDLER v4 ---\n")
+@celery_app.task(name="tasks.process_media_with_gemini", bind=True, max_retries=3, default_retry_delay=60)
+def process_media_with_gemini(self, media_item_id: int, file_url: str):
+    """
+    Celery task to download an image, send it to Google Gemini PRO for analysis,
+    and update the database with the detailed AI report.
+    """
+    print(f"Starting DETAILED AI task for media_item_id: {media_item_id}, file_url: {file_url}")
     
-    # AI analysis part
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    ai_results = {
-        "species": "Unknown",
-        "health_status": "Unknown",
-        "confidence": 0.0
-    }
-    final_status = "failed"
     try:
+        genai.configure(api_key=settings.GOOGLE_API_KEY)
+    except Exception as e:
+        print(f"FATAL: Could not configure Google Gemini in task for media_item_id {media_item_id}: {e}")
+        update_db_sync_operation(media_item_id, {}, "failed")
+        return {"media_item_id": media_item_id, "final_status": "failed"}
+
+    # UPGRADED MODEL
+    model = genai.GenerativeModel('gemini-1.5-pro')
+    ai_results = {}
+    final_status = "failed"
+
+    try:
+        print(f"Downloading image from {file_url} for media_item_id {media_item_id}...")
         response = requests.get(file_url, timeout=30)
         response.raise_for_status()
-        image = Image.open(BytesIO(response.content))
-        ai_response = model.generate_content([PROMPT_V2, image])
-        cleaned_text = ai_response.text.strip().lstrip("```json").rstrip("```").strip()
-        ai_results_temp = json.loads(cleaned_text)
+        image_bytes = BytesIO(response.content)
+        image = Image.open(image_bytes)
+        print(f"Image downloaded and opened successfully for media_item_id {media_item_id}.")
+
+        print(f"Sending image to Google Gemini PRO for media_item_id {media_item_id}...")
+        # USE THE NEW PROMPT
+        ai_response = model.generate_content([PROMPT_V3, image])
         
-        # Ensure the AI results match the expected format for display
-        if ai_results_temp.get("is_marine_life_present") is False:
-            ai_results["species"] = "No Marine Life Detected"
-            ai_results["health_status"] = "N/A"
-        else:
-            ai_results["species"] = ai_results_temp.get("species", "Unknown")
-            ai_results["health_status"] = ai_results_temp.get("health_status", "Unknown")
-            ai_results["confidence"] = ai_results_temp.get("confidence", 0.0)
+        cleaned_text = ai_response.text.strip().lstrip("```json").rstrip("```").strip()
+        ai_results = json.loads(cleaned_text)
+        
+        if not ai_results.get("is_marine_life_present"):
+            # Handle the specific case where no marine life is detected
+            ai_results = {
+                "is_marine_life_present": False,
+                "primary_species": {"common_name": "No Marine Life Detected"},
+                "health_assessment": {"status": "N/A"},
+                "environmental_context": {},
+                "other_detected_species": [],
+                "ai_model_version": "gemini-1.5-pro-v1-task"
+            }
+
         final_status = "completed"
+        print(f"AI analysis completed successfully for media_item_id {media_item_id}.")
+
+    except requests.exceptions.RequestException as req_err:
+        print(f"Network/Request error for media_item_id {media_item_id}: {req_err}")
+        try:
+            self.retry(exc=req_err, countdown=60)
+        except Exception as retry_exc:
+            print(f"Failed to retry task for media_item_id {media_item_id}: {retry_exc}")
+        final_status = "failed_network"
+    except json.JSONDecodeError as json_err:
+        print(f"JSON parsing error for media_item_id {media_item_id}: {json_err}. Raw AI response: '{ai_response.text}'")
+        final_status = "failed_ai_parse"
     except Exception as e:
-        print(f"ERROR in AI Task for media_item_id {media_item_id}: {e}")
-        final_status = "failed"
-
-    # Update the database with the AI results
-    update_db_sync_operation(media_item_id, ai_results, final_status)
-
-    # Return the results in a format that matches the UI
-    return {
-        "media_item_id": media_item_id,
-        "final_status": final_status,
-        "ai_prediction": {
-            "species": ai_results["species"],
-            "health": ai_results["health_status"]
-        },
-        "community_validated": {
-            "species": "Not yet validated",  # Placeholder for community validation
-            "health": "Not yet validated"
-        }
-    }
+        print(f"Unhandled error in AI Task for media_item_id {media_item_id}: {e}")
+        try:
+            self.retry(exc=e, countdown=120)
+        except Exception as retry_exc:
+            print(f"Failed to retry task for media_item_id {media_item_id}: {retry_exc}")
+        final_status = "failed_unhandled"
+    finally:
+        print(f"Updating DB with AI results and status '{final_status}' for media_item_id {media_item_id}...")
+        update_db_sync_operation(media_item_id, ai_results, final_status)
+        print(f"AI task finished for media_item_id {media_item_id} with status: {final_status}.")
+        return {"media_item_id": media_item_id, "final_status": final_status, "ai_results": ai_results}

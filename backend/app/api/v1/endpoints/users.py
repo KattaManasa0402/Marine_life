@@ -13,7 +13,7 @@ from app.models.user import User as UserModel # For type hinting current_user
 router = APIRouter()
 
 # --- User Registration Endpoint (existing) ---
-@router.post("/", response_model=schemas.User, status_code=status.HTTP_201_CREATED, summary="Create a new user")
+@router.post("/register", response_model=schemas.User, status_code=status.HTTP_201_CREATED, summary="Create a new user")
 async def create_new_user(user_in: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
     db_user_by_username = await crud.crud_user.get_user_by_username(db, username=user_in.username)
     if db_user_by_username:

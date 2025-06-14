@@ -2,64 +2,112 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import { FaSignInAlt, FaUserPlus } from 'react-icons/fa';
+import IconWrapper from '../utils/IconWrapper';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const from = location.state?.from?.pathname || "/upload";
 
-  const from = location.state?.from?.pathname || "/";
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
+    setIsLoading(true);
+    const loadingToast = toast.loading('Diving in...');
     const formData = new URLSearchParams();
     formData.append('username', username);
     formData.append('password', password);
-
     try {
-      const response = await api.post('/users/login', formData, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      });
+      const response = await api.post('/users/login', formData, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
       await login(response.data.access_token);
-      navigate(from, { replace: true });
+      toast.success('Welcome to MarineWatch!', { id: loadingToast });
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed. Please check your credentials.');
+      toast.error(err.response?.data?.detail || 'Login failed. Please check your credentials.', { id: loadingToast });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center py-12">
-      <div className="p-8 bg-white rounded-xl shadow-lg w-full max-w-md">
-        <div className="text-center">
-            <h2 className="text-3xl font-bold text-primary">Welcome Back!</h2>
-            <p className="mt-2 text-sm text-gray-600">Sign in to continue to MarineWatch</p>
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="flex justify-center items-center py-12 min-h-[calc(100vh-200px)]"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+        className="glass-card w-full max-w-md p-8 relative overflow-hidden"
+      >
+        <div className="floating-bubble floating-bubble-small top-1/4 left-1/4 animate-[bubble-float-1]" style={{'--rand-x': '20px'} as React.CSSProperties}></div>
+        <div className="floating-bubble floating-bubble-medium top-1/2 right-1/3 animate-[bubble-float-2]" style={{'--rand-x': '-30px'} as React.CSSProperties}></div>
+        <div className="floating-bubble floating-bubble-large bottom-1/4 left-1/2 animate-[bubble-float-3]" style={{'--rand-x': '40px'} as React.CSSProperties}></div>
+        <div className="floating-bubble floating-bubble-small top-1/10 left-3/4 animate-[bubble-float-1]" style={{'--rand-x': '10px', 'animation-delay': '1s'} as React.CSSProperties}></div>
+
+        <div className="text-center relative z-10">
+          <h2 className="text-4xl font-heading text-ocean-dark font-bold">Welcome Back!</h2>
+          <p className="mt-2 text-ocean-text-light text-lg">Sign in to your MarineWatch account</p>
         </div>
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {error && <p className="text-center bg-red-100 text-error p-3 rounded-md">{error}</p>}
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="username-address" className="sr-only">Username</label>
-              <input id="username-address" name="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm" placeholder="Username" />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">Password</label>
-              <input id="password" name="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm" placeholder="Password" />
-            </div>
+        <form onSubmit={handleSubmit} className="mt-8 space-y-6 relative z-10">
+          <div>
+            <motion.input
+              whileFocus={{ scale: 1.01 }}
+              id="username"
+              name="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              className="input-field"
+              placeholder="Username"
+            />
           </div>
-          <button type="submit" className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-            Sign in
-          </button>
-          <p className="text-center text-sm text-gray-600">
-            Don't have an account? <Link to="/register" className="font-medium text-secondary hover:text-primary">Register here</Link>
+          <div>
+            <motion.input
+              whileFocus={{ scale: 1.01 }}
+              id="password"
+              name="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="input-field"
+              placeholder="Password"
+            />
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            type="submit"
+            disabled={isLoading}
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            {isLoading ? 'Signing In...' : <><IconWrapper icon={<FaSignInAlt />} /> Sign In</>}
+          </motion.button>
+          <p className="text-center text-ocean-text-light text-md">
+            Don't have an account?{' '}
+            <Link to="/register" className="font-semibold text-ocean-primary hover:text-ocean-dark transition-colors">
+              Register here <IconWrapper icon={<FaUserPlus className="inline-block ml-1" />} />
+            </Link>
           </p>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
+
 export default LoginPage;

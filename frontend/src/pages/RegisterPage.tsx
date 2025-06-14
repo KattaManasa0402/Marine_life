@@ -1,68 +1,112 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import { FaUserPlus, FaSignInAlt } from 'react-icons/fa';
 
 const RegisterPage = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-
+    setIsLoading(true);
+    const loadingToast = toast.loading('Creating account...');
     try {
-      await api.post('/users/', { username, email, password });
-      setSuccess('Registration successful! Redirecting to login...');
-      setTimeout(() => navigate('/login'), 2000);
-    } catch (err: any)
-    {
-      if (Array.isArray(err.response?.data?.detail)) {
-        const errorMessages = err.response.data.detail.map((d: any) => d.msg).join(', ');
-        setError(errorMessages);
-      } else {
-        setError(err.response?.data?.detail || 'Registration failed. Please try again.');
-      }
+      await api.post('/users/register', { username, email, password });
+      toast.success('Account created! Please log in.', { id: loadingToast });
+      navigate('/login');
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Registration failed. Try again.', { id: loadingToast });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center py-12">
-      <div className="p-8 bg-white rounded-xl shadow-lg w-full max-w-md">
-        <div className="text-center">
-            <h2 className="text-3xl font-bold text-primary">Create an Account</h2>
-            <p className="mt-2 text-sm text-gray-600">Join the community and help monitor marine life</p>
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="flex justify-center items-center py-12 min-h-[calc(100vh-200px)]"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+        className="glass-card w-full max-w-md p-8 relative overflow-hidden"
+      >
+        <div className="floating-bubble floating-bubble-large top-1/4 right-1/4 animate-[bubble-float-3]" style={{'--rand-x': '40px'} as React.CSSProperties}></div>
+        <div className="floating-bubble floating-bubble-medium top-1/2 left-1/3 animate-[bubble-float-2]" style={{'--rand-x': '-30px'} as React.CSSProperties}></div>
+        <div className="floating-bubble floating-bubble-small bottom-1/4 right-1/2 animate-[bubble-float-1]" style={{'--rand-x': '10px'} as React.CSSProperties}></div>
+
+        <div className="text-center relative z-10">
+          <h2 className="text-4xl font-heading text-ocean-dark font-bold">Join the Watch!</h2>
+          <p className="mt-2 text-ocean-text-light text-lg">Create your MarineWatch account</p>
         </div>
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {error && <p className="text-center bg-red-100 text-error p-3 rounded-md">{error}</p>}
-          {success && <p className="text-center bg-green-100 text-success p-3 rounded-md">{success}</p>}
-          <div className="rounded-md shadow-sm -space-y-px">
-             <div>
-              <label htmlFor="username" className="sr-only">Username</label>
-              <input id="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm" placeholder="Username" />
-            </div>
-             <div>
-              <label htmlFor="email-address" className="sr-only">Email address</label>
-              <input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm" placeholder="Email address" />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">Password</label>
-              <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm" placeholder="Password" />
-            </div>
+        <form onSubmit={handleSubmit} className="mt-8 space-y-6 relative z-10">
+          <div>
+            <motion.input
+              whileFocus={{ scale: 1.01 }}
+              id="username"
+              name="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              className="input-field"
+              placeholder="Username"
+            />
           </div>
-          <button type="submit" className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-accent hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent">
-            Register
-          </button>
-          <p className="text-center text-sm text-gray-600">
-            Already have an account? <Link to="/login" className="font-medium text-secondary hover:text-primary">Sign in here</Link>
+          <div>
+            <motion.input
+              whileFocus={{ scale: 1.01 }}
+              id="email"
+              name="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="input-field"
+              placeholder="Email address"
+            />
+          </div>
+          <div>
+            <motion.input
+              whileFocus={{ scale: 1.01 }}
+              id="password"
+              name="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="input-field"
+              placeholder="Password"
+            />
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            type="submit"
+            disabled={isLoading}
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            {isLoading ? 'Registering...' : <><FaUserPlus /> Register</>}
+          </motion.button>
+          <p className="text-center text-ocean-text-light text-md">
+            Already have an account?{' '}
+            <Link to="/login" className="font-semibold text-ocean-primary hover:text-ocean-dark transition-colors">
+              Log in here <FaSignInAlt className="inline-block ml-1" />
+            </Link>
           </p>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
+
 export default RegisterPage;

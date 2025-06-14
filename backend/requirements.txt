@@ -8,9 +8,9 @@ pydantic-settings==2.9.1
 # Database
 SQLAlchemy==2.0.41
 asyncpg==0.30.0
+psycopg2-binary==2.9.9
 alembic==1.16.1
 greenlet==3.2.2
-psycopg2-binary==2.9.9
 
 # Celery and Task Queue
 celery==5.4.0
@@ -28,7 +28,7 @@ email_validator==2.2.0
 # MinIO Object Storage
 minio==7.2.8
 
-# --- NEW: Google AI and Image Handling ---
+# Google AI and Image Handling
 google-generativeai==0.7.1
 requests==2.32.3
 Pillow==10.4.0
@@ -36,8 +36,3 @@ Pillow==10.4.0
 # Utilities
 python-dotenv==1.1.0
 python-multipart==0.0.20
-anyio==4.9.0
-httpx==0.28.1
-numpy==2.1.
-gunicorn==22.0.0
-cloudinary

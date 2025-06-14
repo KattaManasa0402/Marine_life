@@ -1,5 +1,3 @@
-# E:\Marine_life\backend\app\main.py
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -10,12 +8,8 @@ from app.api.v1.api_router import api_v1_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Application startup...")
-    # This check is useful to avoid running create_db_and_tables in production
-    # if you manage migrations with Alembic.
     if settings.DEBUG:
-        print("ASYNC: Attempting to create database tables...")
         await create_db_and_tables()
-        print("ASYNC: Database tables check/creation complete.")
     yield
     print("Application shutdown...")
 
@@ -26,22 +20,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# --- REVISED CORS MIDDLEWARE SECTION ---
-# This new logic reads the allowed origins from your settings file,
-# which we will set in the Render environment.
-origins = []
-if settings.CORS_ORIGINS:
-    # This splits the string "http://url1.com,http://url2.com" into a list
-    origins.extend([origin.strip() for origin in settings.CORS_ORIGINS.split(",")])
-
+origins = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "X-Requested-With", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"],
+    expose_headers=["Content-Length", "Content-Disposition"],
+    max_age=600,
 )
-# --- END CORS MIDDLEWARE SECTION ---
 
 app.include_router(api_v1_router, prefix=settings.API_V1_STR)
 

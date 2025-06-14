@@ -9,6 +9,10 @@ async def get_user_by_username(db: AsyncSession, username: str) -> Optional[User
     result = await db.execute(select(UserModel).filter(UserModel.username == username))
     return result.scalar_one_or_none()
 
+async def get_user_by_email(db: AsyncSession, email: str) -> Optional[UserModel]:
+    result = await db.execute(select(UserModel).filter(UserModel.email == email))
+    return result.scalar_one_or_none()
+
 async def create_user(db: AsyncSession, user_in: UserCreate) -> UserModel:
     hashed_password = get_password_hash(user_in.password)
     db_user = UserModel(email=user_in.email, username=user_in.username, hashed_password=hashed_password)
@@ -18,6 +22,9 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> UserModel:
     return db_user
 
 async def add_score_and_check_badges(db: AsyncSession, user: UserModel, points: int) -> UserModel:
+    # Ensure we have the latest user data
+    await db.refresh(user)
+    
     # Add the points to the user's score
     user.score += points
 
@@ -37,15 +44,18 @@ async def add_score_and_check_badges(db: AsyncSession, user: UserModel, points: 
         # Check if the user has reached the score threshold AND doesn't already have the badge
         if user.score >= threshold and badge not in new_badges:
             new_badges.append(badge)
-            made_change = True
-
-    # If we added any new badges, we re-assign the list to the user's earned_badges.
+            made_change = True    # If we added any new badges, we re-assign the list to the user's earned_badges.
     # This reassignment reliably tells SQLAlchemy that the field has changed.
     if made_change:
         user.earned_badges = new_badges
     # =========================================================
 
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return user
+    try:
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        return user
+    except Exception as e:
+        await db.rollback()
+        # Re-raise the exception with more context
+        raise Exception(f"Failed to update user score: {str(e)}") from e
