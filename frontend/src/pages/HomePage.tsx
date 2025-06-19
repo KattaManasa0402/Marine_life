@@ -1,110 +1,96 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaCompass, FaCameraRetro, FaChartLine } from 'react-icons/fa';
+import { FaCompass, FaCameraRetro, FaChartLine } from 'react-icons/fa6';
+import GlassCard from '../components/common/GlassCard';
 import IconWrapper from '../utils/IconWrapper';
 
 const HomePage: React.FC = () => {
   const sectionVariants = {
     hidden: { opacity: 0, y: 50 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.4, 0, 0.2, 1] } }
   };
 
   const cardVariants = {
     hidden: { opacity: 0, scale: 0.9 },
-    visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: "easeOut" } }
+    visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: [0.4, 0, 0.2, 1] } }
   };
 
   return (
-    <div className="pb-16">
-      <motion.section
-        initial="hidden"
-        animate="visible"
-        variants={sectionVariants}
-        className="relative text-center py-20 px-4 bg-gradient-hero rounded-b-3xl shadow-lg mb-16"
+    <div className="pb-16 text-sea-foam">
+      {/* Hero Section */}
+      <motion.section 
+        initial="hidden" 
+        animate="visible" 
+        variants={sectionVariants} 
+        className="relative text-center py-20 px-4 mb-16 overflow-hidden"
       >
+        <div className="bubble w-96 h-96 -top-48 -left-48"></div>
+        <div className="bubble w-64 h-64 -bottom-32 -right-32"></div>
         <div className="relative z-10 max-w-4xl mx-auto">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="text-6xl font-heading text-ocean-dark font-extrabold leading-tight mb-6"
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.2, duration: 0.8 }} 
+            className="text-6xl font-display font-extrabold leading-tight mb-6"
           >
-            About <span className="text-ocean-primary">MarineWatch</span>
+            Dive into <span className="text-aqua-glow">MarineScope</span>
           </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-            className="text-xl text-ocean-text-light mb-8 max-w-2xl mx-auto"
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.4, duration: 0.8 }} 
+            className="text-xl text-sea-foam/80 mb-8 max-w-2xl mx-auto"
           >
-            MarineWatch is your ultimate platform for community-driven marine life monitoring and AI-powered insights. Join us in protecting our oceans!
+            Join our community in exploring and protecting the wonders of marine life through AI-powered insights and collaborative monitoring.
           </motion.p>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }} 
+            animate={{ opacity: 1, scale: 1 }} 
             transition={{ delay: 0.6, duration: 0.8 }}
           >
-            <Link to="/upload" className="btn-primary text-xl">
-              <IconWrapper icon={<FaCameraRetro className="inline-block mr-3" />} /> Start Uploading
+            <Link to="/upload" className="btn-primary text-xl flex items-center justify-center gap-3 w-max mx-auto">
+              <IconWrapper>{(FaCameraRetro as any)()}</IconWrapper> Start Your Journey
             </Link>
           </motion.div>
         </div>
       </motion.section>
 
-      <motion.section
-        initial="hidden"
-        animate="visible"
-        variants={sectionVariants}
-        className="py-16 px-4"
+      {/* Features Section */}
+      <motion.section 
+        initial="hidden" 
+        whileInView="visible" 
+        viewport={{ once: true }} 
+        variants={sectionVariants} 
+        className="py-16 px-4 relative"
       >
-        <h2 className="text-4xl font-heading text-ocean-dark text-center mb-12 font-bold">
-          Our <span className="text-ocean-primary">Mission</span>
+        <div className="bubble w-72 h-72 top-1/4 -right-36"></div>
+        <div className="bubble w-56 h-56 bottom-1/4 -left-28"></div>
+        <h2 className="text-4xl font-display text-center mb-12 font-bold">
+          Our <span className="text-aqua-glow">Mission</span>
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          <motion.div variants={cardVariants} className="glass-card p-8 flex flex-col items-center text-center">
-            <IconWrapper icon={<FaCompass className="text-ocean-primary text-5xl mb-4" />} />
-            <h3 className="text-2xl font-heading text-ocean-dark font-semibold mb-3">Community-Powered</h3>
-            <p className="text-ocean-text-light">
-              Upload sightings, vote on AI predictions, and contribute to a global marine database with fellow ocean enthusiasts.
-            </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <motion.div variants={cardVariants}>
+            <GlassCard className="p-8 h-full flex flex-col items-center text-center transform hover:scale-105 transition-transform duration-300">
+              <IconWrapper>{(FaCompass as any)({ className: "text-aqua-glow text-5xl mb-4" })}</IconWrapper>
+              <h3 className="text-2xl font-display font-semibold mb-3">Community-Powered</h3>
+              <p className="text-sea-foam/70">Join fellow ocean enthusiasts in documenting and validating marine life sightings through our collaborative platform.</p>
+            </GlassCard>
           </motion.div>
-          <motion.div variants={cardVariants} className="glass-card p-8 flex flex-col items-center text-center">
-            <IconWrapper icon={<FaCameraRetro className="text-ocean-primary text-5xl mb-4" />} />
-            <h3 className="text-2xl font-heading text-ocean-dark font-semibold mb-3">AI Intelligence</h3>
-            <p className="text-ocean-text-light">
-              Our advanced AI identifies species and assesses health from your images, providing instant preliminary insights.
-            </p>
+          <motion.div variants={cardVariants}>
+            <GlassCard className="p-8 h-full flex flex-col items-center text-center transform hover:scale-105 transition-transform duration-300">
+              <IconWrapper>{(FaCameraRetro as any)({ className: "text-aqua-glow text-5xl mb-4" })}</IconWrapper>
+              <h3 className="text-2xl font-display font-semibold mb-3">AI Intelligence</h3>
+              <p className="text-sea-foam/70">Experience instant species identification and health assessment powered by cutting-edge artificial intelligence.</p>
+            </GlassCard>
           </motion.div>
-          <motion.div variants={cardVariants} className="glass-card p-8 flex flex-col items-center text-center">
-            <IconWrapper icon={<FaChartLine className="text-ocean-primary text-5xl mb-4" />} />
-            <h3 className="text-2xl font-heading text-ocean-dark font-semibold mb-3">Protect Our Oceans</h3>
-            <p className="text-ocean-text-light">
-              By collecting and verifying data, we help researchers and conservationists understand and protect marine ecosystems.
-            </p>
+          <motion.div variants={cardVariants}>
+            <GlassCard className="p-8 h-full flex flex-col items-center text-center transform hover:scale-105 transition-transform duration-300">
+              <IconWrapper>{(FaChartLine as any)({ className: "text-aqua-glow text-5xl mb-4" })}</IconWrapper>
+              <h3 className="text-2xl font-display font-semibold mb-3">Protect Our Oceans</h3>
+              <p className="text-sea-foam/70">Contribute to marine conservation efforts by helping build a comprehensive database of marine life observations.</p>
+            </GlassCard>
           </motion.div>
-        </div>
-      </motion.section>
-
-      <motion.section
-        initial="hidden"
-        animate="visible"
-        variants={sectionVariants}
-        className="py-16 px-4 text-center"
-      >
-        <h2 className="text-4xl font-heading text-ocean-dark text-center mb-8 font-bold">
-          Ready to make a <span className="text-ocean-primary">Difference?</span>
-        </h2>
-        <p className="text-xl text-ocean-text-light mb-12 max-w-2xl mx-auto">
-          Every sighting you share helps us build a clearer picture of marine health. Join MarineWatch today!
-        </p>
-        <div className="flex flex-wrap justify-center gap-6">
-          <Link to="/register" className="btn-primary text-xl">
-            Join the Community
-          </Link>
-          <Link to="/sightings" className="btn-secondary text-xl">
-            Explore Sightings
-          </Link>
         </div>
       </motion.section>
     </div>

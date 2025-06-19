@@ -29,7 +29,8 @@ async def create_media_item(
     # Add the user_id separately.
     db_media_item = MediaItemModel(
         **media_item_data,
-        user_id=user_id
+        user_id=user_id,
+        updated_at=datetime.now(timezone.utc) # Explicitly set updated_at on creation
     )
     db.add(db_media_item) # Add the new object to the session
     await db.commit()      # Commit the transaction to save to the database

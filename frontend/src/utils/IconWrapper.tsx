@@ -1,13 +1,16 @@
 import React from 'react';
-import { ReactNode } from 'react';
 
 interface IconWrapperProps {
-  children?: React.ReactNode;
+  children: React.ReactElement<any, any>;
   className?: string;
 }
 
-const IconWrapper: React.FC<IconWrapperProps> = ({ children, className }) => {
-  return <span className={className}>{children}</span>;
+const IconWrapper: React.FC<IconWrapperProps> = ({ children, className = '' }) => {
+  return (
+    <span className={`inline-flex items-center justify-center ${className}`}>
+      {children}
+    </span>
+  );
 };
 
 export default IconWrapper;

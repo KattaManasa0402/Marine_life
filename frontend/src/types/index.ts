@@ -4,9 +4,10 @@ export interface User {
   email: string;
   is_active: boolean;
   is_superuser: boolean;
-  points: number;
-  badges: string[];
+  score: number; // Added score
+  badges: string[]; // Renamed from earned_badges for consistency
   created_at: string;
+  updated_at: string;
 }
 
 export interface MediaItem {
@@ -20,15 +21,15 @@ export interface MediaItem {
   health_status_ai_prediction: string | null;
   ai_confidence_score: number | null;
   ai_model_version: string | null;
-  ai_processing_status: 'pending' | 'completed' | 'failed';
+  ai_processing_status: 'pending' | 'completed' | 'failed' | 'failed_queue';
   validated_species: string | null;
-  validated_health: string | null;
+  validated_health: string | null; // Corrected from validated_health_status
   community_votes_up: number;
   community_votes_down: number;
-  is_community_validated: boolean;
+  is_community_validated: boolean; // Added this field
   created_at: string;
   updated_at: string;
-  owner: User; // Assuming owner information is nested
+  owner: User; 
 }
 
 export interface MapDataPoint {

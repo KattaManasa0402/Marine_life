@@ -7,109 +7,102 @@ interface AuthContextType {
   token: string | null;
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (accessToken: string) => Promise<void>;
   logout: () => void;
-  refreshToken: () => Promise<void>;
   updateUserPoints: (newPoints: number) => void;
   updateUserBadges: (newBadges: string[]) => void;
-  isLoading: boolean;
 }
 
+// This interface defines the expected shape of the decoded JWT payload
 interface DecodedToken {
-  sub: string;
-  exp: number;
-  id: number;
+  sub: string; // Subject (username)
+  exp: number; // Expiration time
+  id: number;  // User ID (which we added in the backend fix)
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('access_token'));
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('access_token'));
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUser = useCallback(async (token: string) => {
+  const fetchUser = useCallback(async (tokenToFetch: string) => {
     try {
-      const decoded: DecodedToken = jwtDecode(token);
+      const decoded: DecodedToken = jwtDecode(tokenToFetch);
+      // We now reliably have the user ID from the token
       const userId = decoded.id;
-      console.log("[AuthContext] Fetching user with ID:", userId);
-      const response = await api.get(`/users/${userId}`);
+      const response = await api.get<User>(`/users/${userId}`);
       setUser(response.data);
-      console.log("[AuthContext] Fetched user data:", response.data);
     } catch (error) {
-      console.error("[AuthContext] Error fetching user data:", error);
-      setUser(null);
+      console.error("Error fetching user data:", error);
+      // If fetching fails, treat as a logout
       localStorage.removeItem('access_token');
       setToken(null);
-    } finally {
-      setIsLoading(false);
-      console.log("[AuthContext] fetchUser completed. isLoading:", false);
+      setUser(null);
     }
   }, []);
 
   useEffect(() => {
-    if (token) {
-      const decoded: DecodedToken = jwtDecode(token);
-      if (decoded.exp * 1000 < Date.now()) {
-        console.log("[AuthContext] Token expired, attempting refresh or logout.");
-        logout();
-      } else {
-        console.log("[AuthContext] Token valid, fetching user data.");
-        fetchUser(token);
+    const initializeAuth = async () => {
+      if (token) {
+        try {
+          const decoded: DecodedToken = jwtDecode(token);
+          // Check if token is expired
+          if (decoded.exp * 1000 < Date.now()) {
+            localStorage.removeItem('access_token');
+            setToken(null);
+            setUser(null);
+          } else {
+            // Token is valid, fetch user data
+            await fetchUser(token);
+          }
+        } catch (error) {
+          // If token is invalid/malformed
+          localStorage.removeItem('access_token');
+          setToken(null);
+          setUser(null);
+        }
       }
-    } else {
       setIsLoading(false);
-      console.log("[AuthContext] No token found, not authenticated. isLoading:", false);
-    }
+    };
+    initializeAuth();
   }, [token, fetchUser]);
 
   const login = async (accessToken: string) => {
+    setIsLoading(true);
     localStorage.setItem('access_token', accessToken);
-    setToken(accessToken);
-    console.log("[AuthContext] Login successful, token set.");
-    await fetchUser(accessToken);
+    setToken(accessToken); // This will trigger the useEffect to fetch the user
   };
 
   const logout = () => {
     localStorage.removeItem('access_token');
     setToken(null);
     setUser(null);
-    console.log("[AuthContext] User logged out.");
-  };
-
-  const refreshToken = async () => {
-    console.warn("Refresh token functionality not implemented. Logging out.");
-    logout();
   };
 
   const updateUserPoints = (newPoints: number) => {
     setUser(prevUser => prevUser ? { ...prevUser, points: newPoints } : null);
-    console.log("[AuthContext] User points updated:", newPoints);
   };
 
   const updateUserBadges = (newBadges: string[]) => {
     setUser(prevUser => prevUser ? { ...prevUser, badges: newBadges } : null);
-    console.log("[AuthContext] User badges updated:", newBadges);
   };
 
-  const isAuthenticated = !!token && !!user;
-
-  const authContextValue: AuthContextType = {
+  const value: AuthContextType = {
     token,
     user,
-    isAuthenticated,
+    isAuthenticated: !isLoading && !!user, // isAuthenticated is only true when not loading and user exists
+    isLoading,
     login,
     logout,
-    refreshToken,
     updateUserPoints,
     updateUserBadges,
-    isLoading,
   };
 
-  console.log("[AuthContext] Render. isAuthenticated:", isAuthenticated, "user:", user ? user.username : "null", "isLoading:", isLoading);
-
   return (
-    <AuthContext.Provider value={authContextValue}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

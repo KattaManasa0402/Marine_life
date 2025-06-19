@@ -1,112 +1,132 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { FaUserPlus, FaUser, FaEnvelope, FaLock } from 'react-icons/fa6';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
-import { FaUserPlus, FaSignInAlt } from 'react-icons/fa';
+import GlassCard from '../components/common/GlassCard';
+import IconWrapper from '../utils/IconWrapper';
 
-const RegisterPage = () => {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+const RegisterPage: React.FC = () => {
+    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    const loadingToast = toast.loading('Creating account...');
-    try {
-      await api.post('/users/register', { username, email, password });
-      toast.success('Account created! Please log in.', { id: loadingToast });
-      navigate('/login');
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Registration failed. Try again.', { id: loadingToast });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        const loadingToast = toast.loading('Creating your account...');
+        try {
+            await api.post('/users/register', {
+                username,
+                email,
+                password,
+            });
+            toast.success('Account created successfully!', { id: loadingToast });
+            navigate('/login');
+        } catch (err: any) {
+            toast.error(err.response?.data?.detail || 'Registration failed.', { id: loadingToast });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="flex justify-center items-center py-12 min-h-[calc(100vh-200px)]"
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        className="glass-card w-full max-w-md p-8 relative overflow-hidden"
-      >
-        <div className="floating-bubble floating-bubble-large top-1/4 right-1/4 animate-[bubble-float-3]" style={{'--rand-x': '40px'} as React.CSSProperties}></div>
-        <div className="floating-bubble floating-bubble-medium top-1/2 left-1/3 animate-[bubble-float-2]" style={{'--rand-x': '-30px'} as React.CSSProperties}></div>
-        <div className="floating-bubble floating-bubble-small bottom-1/4 right-1/2 animate-[bubble-float-1]" style={{'--rand-x': '10px'} as React.CSSProperties}></div>
+    return (
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            className="flex justify-center items-center py-12"
+        >
+            <GlassCard className="p-8 w-full max-w-md relative overflow-hidden">
+                <div className="bubble w-48 h-48 -top-20 -left-20"></div>
+                <div className="bubble w-32 h-32 -bottom-16 -right-16"></div>
+                
+                <div className="text-center relative z-10">
+                    <IconWrapper>
+                        {(FaUserPlus as any)({ className: "text-aqua-glow text-5xl mb-4" })}
+                    </IconWrapper>
+                    <h2 className="text-3xl font-display text-sea-foam">Join the Community</h2>
+                    <p className="mt-2 text-sm text-sea-foam/70">Start your marine exploration journey</p>
+                </div>
 
-        <div className="text-center relative z-10">
-          <h2 className="text-4xl font-heading text-ocean-dark font-bold">Join the Watch!</h2>
-          <p className="mt-2 text-ocean-text-light text-lg">Create your MarineWatch account</p>
-        </div>
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6 relative z-10">
-          <div>
-            <motion.input
-              whileFocus={{ scale: 1.01 }}
-              id="username"
-              name="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="input-field"
-              placeholder="Username"
-            />
-          </div>
-          <div>
-            <motion.input
-              whileFocus={{ scale: 1.01 }}
-              id="email"
-              name="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="input-field"
-              placeholder="Email address"
-            />
-          </div>
-          <div>
-            <motion.input
-              whileFocus={{ scale: 1.01 }}
-              id="password"
-              name="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="input-field"
-              placeholder="Password"
-            />
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            type="submit"
-            disabled={isLoading}
-            className="btn-primary w-full flex items-center justify-center gap-2"
-          >
-            {isLoading ? 'Registering...' : <><FaUserPlus /> Register</>}
-          </motion.button>
-          <p className="text-center text-ocean-text-light text-md">
-            Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-ocean-primary hover:text-ocean-dark transition-colors">
-              Log in here <FaSignInAlt className="inline-block ml-1" />
-            </Link>
-          </p>
-        </form>
-      </motion.div>
-    </motion.div>
-  );
+                <form onSubmit={handleSubmit} className="mt-8 space-y-6 relative z-10">
+                    <div className="space-y-4">
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <IconWrapper>{(FaUser as any)({ className: "text-aqua-glow/50" })}</IconWrapper>
+                            </div>
+                            <input
+                                id="username"
+                                name="username"
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                required
+                                className="input-field pl-10"
+                                placeholder="Username"
+                            />
+                        </div>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <IconWrapper>{(FaEnvelope as any)({ className: "text-aqua-glow/50" })}</IconWrapper>
+                            </div>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                className="input-field pl-10"
+                                placeholder="Email"
+                            />
+                        </div>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <IconWrapper>{(FaLock as any)({ className: "text-aqua-glow/50" })}</IconWrapper>
+                            </div>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="input-field pl-10"
+                                placeholder="Password"
+                            />
+                        </div>
+                    </div>
+
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full btn-primary py-3 flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <>
+                                <IconWrapper>{(FaUserPlus as any)()}</IconWrapper>
+                                Create Account
+                            </>
+                        )}
+                    </motion.button>
+
+                    <p className="text-center text-sm text-sea-foam/70">
+                        Already have an account?{' '}
+                        <Link to="/login" className="text-aqua-glow hover:text-sea-foam transition-colors">
+                            Sign in here
+                        </Link>
+                    </p>
+                </form>
+            </GlassCard>
+        </motion.div>
+    );
 };
 
 export default RegisterPage;

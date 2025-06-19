@@ -2,14 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.db.database import create_db_and_tables
+# We remove this as Alembic will handle it now
+# from app.db.database import create_db_and_tables 
 from app.api.v1.api_router import api_v1_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Application startup...")
-    if settings.DEBUG:
-        await create_db_and_tables()
+    # The line below is removed. In a real production setup, you would run
+    # 'alembic upgrade head' manually during deployment.
+    # await create_db_and_tables() 
     yield
     print("Application shutdown...")
 
@@ -26,7 +28,7 @@ app.add_middleware(
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["Content-Type", "Authorization", "Accept", "X-Requested-With", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"],
+    allow_headers=["*"], # Using a wildcard for simplicity during development
     expose_headers=["Content-Length", "Content-Disposition"],
     max_age=600,
 )

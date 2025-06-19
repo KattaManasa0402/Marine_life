@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List, Optional
+
 from app.models.user import User as UserModel
 from app.schemas.user import UserCreate, UserUpdate
 from app.core.security import get_password_hash
@@ -21,34 +22,51 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> UserModel:
     await db.refresh(db_user)
     return db_user
 
+# --- NEW FUNCTION TO FIX THE BUG ---
+async def update_user(db: AsyncSession, db_user: UserModel, user_in: UserUpdate) -> UserModel:
+    """
+    Update a user's details in the database.
+    """
+    # Get a dictionary of the fields that were actually provided by the user
+    update_data = user_in.model_dump(exclude_unset=True)
+
+    # If the user is updating their password, we need to hash it first
+    if "password" in update_data and update_data["password"]:
+        hashed_password = get_password_hash(update_data["password"])
+        db_user.hashed_password = hashed_password
+        del update_data["password"]  # Remove password from dict to avoid setting it directly
+
+    # Update the rest of the fields
+    for field, value in update_data.items():
+        setattr(db_user, field, value)
+
+    db.add(db_user)
+    await db.commit()
+    await db.refresh(db_user)
+    return db_user
+# --- END NEW FUNCTION ---
+
 async def add_score_and_check_badges(db: AsyncSession, user: UserModel, points: int) -> UserModel:
-    # Ensure we have the latest user data
     await db.refresh(user)
     
-    # Add the points to the user's score
     user.score += points
 
-    # Define the badge thresholds
     BADGE_THRESHOLDS = {
         "Ocean Explorer": 10,
         "Marine Scientist I": 50,
         "Deep Sea Diver": 100,
     }
 
-    # ===================== THE FIX IS HERE =====================
-    # Create a copy of the existing badges list to modify
     new_badges = list(user.earned_badges)
     made_change = False
 
     for badge, threshold in BADGE_THRESHOLDS.items():
-        # Check if the user has reached the score threshold AND doesn't already have the badge
         if user.score >= threshold and badge not in new_badges:
             new_badges.append(badge)
-            made_change = True    # If we added any new badges, we re-assign the list to the user's earned_badges.
-    # This reassignment reliably tells SQLAlchemy that the field has changed.
+            made_change = True
+    
     if made_change:
         user.earned_badges = new_badges
-    # =========================================================
 
     try:
         db.add(user)
@@ -57,5 +75,4 @@ async def add_score_and_check_badges(db: AsyncSession, user: UserModel, points: 
         return user
     except Exception as e:
         await db.rollback()
-        # Re-raise the exception with more context
         raise Exception(f"Failed to update user score: {str(e)}") from e

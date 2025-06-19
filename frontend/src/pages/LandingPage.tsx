@@ -1,8 +1,9 @@
-// filepath: e:\Marine_life\frontend\src\pages\LandingPage.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { FaCamera } from 'react-icons/fa6';
 import GlassCard from '../components/common/GlassCard';
+import IconWrapper from '../utils/IconWrapper';
 
 const LandingPage = () => {
   const [animateTitle, setAnimateTitle] = useState(false);
@@ -146,7 +147,7 @@ const LandingPage = () => {
                   >
                     <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-aqua-glow to-azure opacity-30 blur-md"></div>
                     <div className="relative z-10">
-                      {feature.icon}
+                      <IconWrapper>{(FaCamera as any)({ className: "text-5xl text-aqua-glow mb-4" })}</IconWrapper>
                     </div>
                   </motion.div>
                   

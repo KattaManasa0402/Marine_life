@@ -1,10 +1,9 @@
 from .config import settings
-from .security import (
-    verify_password, 
-    get_password_hash, 
-    create_access_token, 
-    # decode_token is no longer needed here
-    oauth2_scheme,
-    get_current_user,
-    get_current_active_user
-)
+# Removed direct import of security functions from here to avoid circular dependencies
+# from .security import (
+#     get_current_active_user,
+#     get_password_hash,
+#     verify_password,
+#     create_access_token,
+#     oauth2_scheme
+# )

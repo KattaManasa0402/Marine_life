@@ -76,19 +76,10 @@ def update_db_sync_operation(media_item_id: int, ai_data: dict, status: str):
             "updated_at": datetime.now(timezone.utc),
             "ai_model_version": ai_data.get("ai_model_version", "gemini-1.5-pro-v1-task-fallback"),
 
-            # Map to new detailed fields
-            "ai_primary_species_name": primary_species.get("common_name"),
-            "ai_primary_species_scientific": primary_species.get("scientific_name"),
-            "ai_confidence_score": float(primary_species.get('identification_confidence', 0.0)),
-            "ai_health_status": health.get("status"),
-            "ai_health_observations": health.get("observations"),
-            "ai_habitat_type": env.get("habitat_type"),
-            "ai_environmental_notes": env.get("notes"),
-            "ai_other_species_detected": ai_data.get("other_detected_species", []),
-            
-            # Update deprecated fields for backward compatibility (optional but good practice)
+            # Map to existing columns in MediaItem model
             "species_ai_prediction": primary_species.get("common_name", "N/A"),
-            "health_status_ai_prediction": health.get("status", "N/A")
+            "health_status_ai_prediction": health.get("status", "N/A"),
+            "ai_confidence_score": float(primary_species.get('identification_confidence', 0.0)),
         }
         
         stmt = update(MediaItem).where(MediaItem.id == media_item_id).values(**update_data)
@@ -111,6 +102,33 @@ def process_media_with_gemini(self, media_item_id: int, file_url: str):
     """
     print(f"Starting DETAILED AI task for media_item_id: {media_item_id}, file_url: {file_url}")
     
+    # --- NEW: Mock AI Response for Debugging ---
+    if settings.DEBUG_AI_MOCK:
+        print(f"DEBUG_AI_MOCK is True. Skipping actual Gemini API call for media_item_id {media_item_id}.")
+        mock_ai_results = {
+            "is_marine_life_present": True,
+            "primary_species": {
+                "scientific_name": "Delphinapterus leucas",
+                "common_name": "Beluga Whale",
+                "identification_confidence": 0.95,
+                "justification": "Recognized by distinctive white coloration and melon head."
+            },
+            "health_assessment": {
+                "status": "Healthy",
+                "observations": "Skin appears clear, no visible injuries."
+            },
+            "environmental_context": {
+                "habitat_type": "Ocean",
+                "water_clarity": "Clear",
+                "notes": "Appears to be in a natural habitat."
+            },
+            "other_detected_species": [],
+            "ai_model_version": "mock-gemini-1.5-pro-v1-task"
+        }
+        update_db_sync_operation(media_item_id, mock_ai_results, "completed")
+        return {"media_item_id": media_item_id, "final_status": "completed", "ai_results": mock_ai_results}
+    # --- END MOCK ---
+
     try:
         genai.configure(api_key=settings.GOOGLE_API_KEY)
     except Exception as e:

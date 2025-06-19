@@ -1,3 +1,4 @@
+import asyncio # Ensure asyncio is imported here if used directly, otherwise remove
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import Depends, HTTPException, status
@@ -7,7 +8,11 @@ from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.user import User as UserModel
-from app.db.database import get_db
+from app.db.database import get_db # THIS LINE IS ADDED BACK
+
+# The import of get_db is moved here to avoid circular dependencies.
+# It's only needed within the functions that use it as a dependency.
+# from app.db.database import get_db # THIS LINE IS REMOVED
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/users/login")

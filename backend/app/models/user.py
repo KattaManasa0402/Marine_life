@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ARRAY, Text # Added ARRAY, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ARRAY, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.db.database import Base # Using absolute import path for clarity
+from app.db.base import Base  # <-- FIX: Import from the new base.py file
 
 class User(Base):
     __tablename__ = "users"
@@ -14,13 +14,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     
-    # --- NEW GAMIFICATION FIELDS ---
-    score = Column(Integer, default=0, nullable=False) # User's total score
-    # Using ARRAY(String) to store names of badges. Requires PostgreSQL.
-    # Alternatively, could be a JSONB column (JSON) for more complex badge data
-    # or a separate 'UserBadge' linking table. For simplicity, ARRAY.
+    score = Column(Integer, default=0, nullable=False)
     earned_badges = Column(ARRAY(String(50)), default=[], nullable=False) 
-    # --- END NEW GAMIFICATION FIELDS ---
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

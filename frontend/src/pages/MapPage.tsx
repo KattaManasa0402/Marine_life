@@ -1,146 +1,117 @@
-import React, { useState, useEffect } from 'react';
-import Map, { Marker, Popup, NavigationControl, type MapLayerMouseEvent } from 'react-map-gl';
+import React, { useState, useEffect, useCallback } from 'react';
+import Map, { Marker, Popup, NavigationControl, GeolocateControl, FullscreenControl, ScaleControl } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import api from '../api/axios';
 import { MapDataPoint } from '../types';
 import { Link } from 'react-router-dom';
 import Spinner from '../components/common/Spinner';
 import { motion } from 'framer-motion';
-import { FaMapMarkerAlt, FaExpandAlt } from 'react-icons/fa';
+import MapSidebar from '../components/common/MapSidebar';
+import MarkerPulse from '../components/common/MarkerPulse';
+import { FaBars, FaLocationDot } from 'react-icons/fa6';
 import IconWrapper from '../utils/IconWrapper';
 
-function MapPage() {
-  const [viewState, setViewState] = useState({ longitude: -20, latitude: 30, zoom: 2, pitch: 20, bearing: 0 });
-  const [mapData, setMapData] = useState<MapDataPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedPin, setSelectedPin] = useState<MapDataPoint | null>(null);
-  const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
+const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
 
-  useEffect(() => {
-    const fetchMapData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await api.get<MapDataPoint[]>('/map/data');
-        setMapData(response.data.filter(p => p.latitude !== null && p.longitude !== null));
-      } catch (error) {
-        console.error('Failed to fetch map data', error);
-        setError('Failed to load map data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMapData();
-  }, []);
+const MapPage: React.FC = () => {
+    const [viewState, setViewState] = useState({ longitude: -20, latitude: 30, zoom: 2.2, pitch: 40, bearing: 0 });
+    const [mapData, setMapData] = useState<MapDataPoint[]>([]);
+    const [selectedPin, setSelectedPin] = useState<MapDataPoint | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const handleMarkerClick = (e: any, pin: MapDataPoint) => {
-    const mapEvent = e as unknown as MapLayerMouseEvent;
-    mapEvent.originalEvent.stopPropagation();
-    setSelectedPin(pin);
-    setViewState(prev => ({
-      ...prev,
-      longitude: pin.longitude,
-      latitude: pin.latitude,
-      zoom: Math.max(prev.zoom, 5)
-    }));
-  };
+    useEffect(() => {
+        const fetchMapData = async () => {
+            if (!MAPBOX_TOKEN) {
+                setError('Mapbox Access Token is not configured.');
+                setLoading(false);
+                return;
+            }
+            setLoading(true);
+            setError(null);
+            try {
+                const response = await api.get<MapDataPoint[]>('/map/data');
+                setMapData(response.data.filter(p => p.latitude != null && p.longitude != null));
+            } catch (err) {
+                setError('Could not load map data.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchMapData();
+    }, []);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="p-4 sm:p-8 flex flex-col items-center"
-    >
-      <motion.h1
-        initial={{ y: -30, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className="text-5xl font-heading text-ocean-dark text-center mb-12 font-bold leading-tight"
-      >
-        Global <span className="text-ocean-primary">Sightings Map</span>
-      </motion.h1>
+    const handleSelectLocation = useCallback((point: MapDataPoint) => {
+        setSelectedPin(point);
+        setViewState(prev => ({ ...prev, longitude: point.longitude, latitude: point.latitude, zoom: Math.max(prev.zoom, 6), pitch: 50, bearing: 0, transitionDuration: 1000 as any }));
+        if (window.innerWidth < 768) {
+            setIsSidebarOpen(false);
+        }
+    }, []);
+    
+    if (loading) {
+        return <div className="flex flex-col justify-center items-center h-[70vh]"><Spinner size="16" /><p className="text-white/80 mt-4 text-lg">Loading Global Sightings...</p></div>;
+    }
 
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="glass-card w-full h-[75vh] rounded-2xl shadow-lg overflow-hidden relative"
-      >
-        {loading && (
-          <div className="absolute inset-0 bg-ocean-base-light bg-opacity-70 flex items-center justify-center z-20">
-            <Spinner size="16" color="ocean-primary" />
-          </div>
-        )}
-        {error && (
-          <div className="absolute inset-0 bg-ocean-base-light bg-opacity-90 flex items-center justify-center z-20 text-ocean-accent-red text-xl font-semibold p-4 text-center">
-            {error}
-          </div>
-        )}
-        {!MAPBOX_TOKEN ? (
-          <div className="absolute inset-0 bg-ocean-base-light bg-opacity-90 flex items-center justify-center z-20 text-ocean-accent-red text-xl font-semibold p-4 text-center">
-            Mapbox Access Token not found. Please set REACT_APP_MAPBOX_ACCESS_TOKEN.
-          </div>
-        ) : (
-          <Map
-            {...viewState}
-            mapboxAccessToken={MAPBOX_TOKEN}
-            onMove={evt => setViewState(evt.viewState)}
-            mapStyle="mapbox://styles/mapbox/light-v11"
-            style={{ width: "100%", height: "100%" }}
-          >
-            <NavigationControl position="top-right" />
-            {mapData.map(pin => (
-              <Marker key={pin.id} latitude={pin.latitude} longitude={pin.longitude}>
-                <motion.div
-                  whileHover={{ scale: 1.2 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="cursor-pointer text-ocean-primary"
-                  onClick={(e) => handleMarkerClick(e, pin)}
-                  title={pin.validated_species || pin.species_prediction || 'Marine Sighting'}
-                >
-                  <IconWrapper icon={<FaMapMarkerAlt className="text-3xl drop-shadow-md" />} />
-                </motion.div>
-              </Marker>
-            ))}
-            {selectedPin && (
-              <Popup
-                longitude={selectedPin.longitude}
-                latitude={selectedPin.latitude}
-                onClose={() => setSelectedPin(null)}
-                closeOnClick={false}
-                anchor="top"
-                offset={20}
-                className="font-sans"
-              >
-                <div className="glass-card w-64 p-0 text-ocean-text-dark border-none shadow-lg">
-                  <img
-                    src={selectedPin.file_url}
-                    alt="sighting"
-                    className="w-full h-36 object-cover rounded-t-xl"
-                  />
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg font-heading text-ocean-dark truncate">
-                      {selectedPin.validated_species || selectedPin.species_prediction || 'Unknown Species'}
-                    </h3>
-                    <p className="text-sm text-ocean-text-light mt-1">
-                      Health: {selectedPin.validated_health || selectedPin.health_prediction || 'N/A'}
-                    </p>
-                    <Link
-                      to={`/media/${selectedPin.id}`}
-                      className="btn-secondary btn-sm mt-3 inline-flex items-center gap-2 px-4 py-1 text-sm rounded-full"
-                    >
-                      <IconWrapper icon={<FaExpandAlt />} /> View Details
-                    </Link>
-                  </div>
-                </div>
-              </Popup>
-            )}
-          </Map>
-        )}
-      </motion.div>
-    </motion.div>
-  );
-}
-
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="container mx-auto px-4 pb-20">
+            <div className="text-center my-8">
+                <h1 className="text-5xl font-display font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-aqua-glow to-azure">Global Discovery Map</h1>
+                <p className="text-lg text-white/80 max-w-3xl mx-auto">Explore marine life sightings from around the world through our community observations.</p>
+            </div>
+            <div className="relative w-full h-[70vh] rounded-3xl overflow-hidden border border-white/10 shadow-lg">
+                {error ? (
+                    <div className="w-full h-full flex items-center justify-center bg-deep-blue/80 text-red-400 text-xl text-center p-4">{error}</div>
+                ) : (
+                    <>
+                        <button onClick={() => setIsSidebarOpen(true)} className="absolute top-4 left-4 z-10 p-3 bg-deep-blue/80 border border-white/10 backdrop-blur-md rounded-lg text-white hover:bg-aqua-glow/20 transition-colors">
+                            <IconWrapper>{(FaBars as any)()}</IconWrapper>
+                        </button>
+                        <MapSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} data={mapData} onSelectLocation={handleSelectLocation} />
+                        <Map {...viewState} mapStyle="mapbox://styles/mapbox/navigation-night-v1" onMove={evt => setViewState(evt.viewState)} mapboxAccessToken={MAPBOX_TOKEN} projection={{name: 'mercator'}} style={{ width: '100%', height: '100%' }}>
+                            <GeolocateControl position="top-left" />
+                            <FullscreenControl position="top-left" />
+                            <NavigationControl position="top-left" visualizePitch={true} />
+                            <ScaleControl position="bottom-left" />
+                            {mapData.map((point) => (
+                                <Marker
+                                    key={point.id}
+                                    longitude={point.longitude}
+                                    latitude={point.latitude}
+                                    anchor="bottom"
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                        onClick={() => handleSelectLocation(point)}
+                                        className="cursor-pointer"
+                                    >
+                                        <IconWrapper>{(FaLocationDot as any)({ className: "text-3xl text-aqua-glow" })}</IconWrapper>
+                                        <MarkerPulse color="rgb(0, 255, 255)" size={6} />
+                                    </motion.div>
+                                </Marker>
+                            ))}
+                            {selectedPin && (
+                                <Popup longitude={selectedPin.longitude} latitude={selectedPin.latitude} anchor="bottom" onClose={() => setSelectedPin(null)} closeOnClick={false} maxWidth="320px" className="map-popup-glass">
+                                    <div className="p-4">
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex-1">
+                                                <h3 className="text-lg font-semibold text-white mb-1">
+                                                    {selectedPin.validated_species ? selectedPin.validated_species : selectedPin.species_prediction || 'Unidentified Species'}
+                                                </h3>
+                                                <p className="text-white/70 text-sm line-clamp-2">{selectedPin.species_prediction || 'No description available'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Popup>
+                            )}
+                        </Map>
+                    </>
+                )}
+            </div>
+        </motion.div>
+    );
+};
 export default MapPage;

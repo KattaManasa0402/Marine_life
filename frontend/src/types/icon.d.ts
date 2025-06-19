@@ -1,0 +1,39 @@
+import { IconType } from 'react-icons';
+
+declare module 'react-icons/fa6' {
+  export const FaUpload: IconType;
+  export const FaFish: IconType;
+  export const FaMap: IconType;
+  export const FaCircleUser: IconType;
+  export const FaGithub: IconType;
+  export const FaTwitter: IconType;
+  export const FaLinkedin: IconType;
+  export const FaHeart: IconType;
+  export const FaBars: IconType;
+  export const FaXmark: IconType;
+  export const FaKey: IconType;
+  export const FaRightFromBracket: IconType;
+  export const FaSignInAlt: IconType;
+  export const FaUserPlus: IconType;
+  export const FaRightToBracket: IconType;
+  export const FaCameraRetro: IconType;
+  export const FaCompass: IconType;
+  export const FaChartLine: IconType;
+  export const FaTriangleExclamation: IconType;
+  export const FaSpinner: IconType;
+  export const FaCircleCheck: IconType;
+  export const FaCircleXmark: IconType;
+  export const FaFlask: IconType;
+  export const FaLightbulb: IconType;
+  export const FaCircleInfo: IconType;
+  export const FaUser: IconType;
+  export const FaCalendarDays: IconType;
+  export const FaLocationDot: IconType;
+  export const FaThumbsUp: IconType;
+  export const FaThumbsDown: IconType;
+  export const FaFaceSadTear: IconType;
+  export const FaStar: IconType;
+  export const FaGlobe: IconType;
+  export const FaTrophy: IconType;
+  export const FaEye: IconType;
+} 

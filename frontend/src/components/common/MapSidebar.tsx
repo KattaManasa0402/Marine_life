@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import GlassCard from './GlassCard';
 import { MapDataPoint } from '../../types';
 
@@ -29,7 +29,7 @@ const MapSidebar: React.FC<MapSidebarProps> = ({ isOpen, onClose, data, onSelect
   }, {} as Record<string, MapDataPoint[]>);
 
   // Animation variants
-  const sidebarVariants = {
+  const sidebarVariants: Variants = {
     open: { 
       x: 0,
       opacity: 1,
@@ -49,7 +49,7 @@ const MapSidebar: React.FC<MapSidebarProps> = ({ isOpen, onClose, data, onSelect
     }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     open: { opacity: 1, y: 0 },
     closed: { opacity: 0, y: 10 }
   };

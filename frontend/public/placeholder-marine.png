@@ -1,0 +1,10 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="200" height="200" rx="10" fill="#1A365D"/>
+<path d="M100 135L70 105L85 90L100 105L115 90L130 105L100 135Z" fill="#4ECDC4"/>
+<circle cx="75" cy="70" r="8" fill="#E0F7FA" fill-opacity="0.6"/>
+<circle cx="125" cy="80" r="12" fill="#4299E1" fill-opacity="0.6"/>
+<path d="M100 65L90 55L100 45L110 55L100 65Z" fill="#FF6B6B" fill-opacity="0.7"/>
+<path d="M50 160C60 170 140 170 150 160L140 150C130 160 70 160 60 150L50 160Z" fill="#2C5282"/>
+<text x="100" y="110" font-family="sans-serif" font-size="18" fill="#E0F7FA" text-anchor="middle" dominant-baseline="middle">No Preview</text>
+<text x="100" y="130" font-family="sans-serif" font-size="12" fill="#E0F7FA" text-anchor="middle" dominant-baseline="middle">Image Processing</text>
+</svg> 

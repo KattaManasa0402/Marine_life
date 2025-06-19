@@ -1,113 +1,122 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { FaKey, FaUser, FaLock } from 'react-icons/fa6';
 import api from '../api/axios';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
-import { FaSignInAlt, FaUserPlus } from 'react-icons/fa';
+import GlassCard from '../components/common/GlassCard';
 import IconWrapper from '../utils/IconWrapper';
 
-const LoginPage = () => {
+const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || "/upload";
-
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, from]);
+  const from = location.state?.from?.pathname || "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    const loadingToast = toast.loading('Diving in...');
+    const loadingToast = toast.loading('Signing in...');
     const formData = new URLSearchParams();
     formData.append('username', username);
     formData.append('password', password);
     try {
-      const response = await api.post('/users/login', formData, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+      const response = await api.post('/users/login', formData, { 
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' } 
+      });
       await login(response.data.access_token);
-      toast.success('Welcome to MarineWatch!', { id: loadingToast });
+      toast.success('Signed in successfully!', { id: loadingToast });
+      navigate(from, { replace: true });
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Login failed. Please check your credentials.', { id: loadingToast });
+      toast.error(err.response?.data?.detail || 'Login failed.', { id: loadingToast });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="flex justify-center items-center py-12 min-h-[calc(100vh-200px)]"
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      className="flex justify-center items-center py-12"
     >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        className="glass-card w-full max-w-md p-8 relative overflow-hidden"
-      >
-        <div className="floating-bubble floating-bubble-small top-1/4 left-1/4 animate-[bubble-float-1]" style={{'--rand-x': '20px'} as React.CSSProperties}></div>
-        <div className="floating-bubble floating-bubble-medium top-1/2 right-1/3 animate-[bubble-float-2]" style={{'--rand-x': '-30px'} as React.CSSProperties}></div>
-        <div className="floating-bubble floating-bubble-large bottom-1/4 left-1/2 animate-[bubble-float-3]" style={{'--rand-x': '40px'} as React.CSSProperties}></div>
-        <div className="floating-bubble floating-bubble-small top-1/10 left-3/4 animate-[bubble-float-1]" style={{'--rand-x': '10px', 'animation-delay': '1s'} as React.CSSProperties}></div>
-
+      <GlassCard className="p-8 w-full max-w-md relative overflow-hidden">
+        <div className="bubble w-48 h-48 -top-20 -left-20"></div>
+        <div className="bubble w-32 h-32 -bottom-16 -right-16"></div>
+        
         <div className="text-center relative z-10">
-          <h2 className="text-4xl font-heading text-ocean-dark font-bold">Welcome Back!</h2>
-          <p className="mt-2 text-ocean-text-light text-lg">Sign in to your MarineWatch account</p>
+          <IconWrapper>
+            {(FaKey as any)({ className: "text-aqua-glow text-5xl mb-4" })}
+          </IconWrapper>
+          <h2 className="text-3xl font-display text-sea-foam">Welcome Back!</h2>
+          <p className="mt-2 text-sm text-sea-foam/70">Sign in to continue your marine exploration</p>
         </div>
+
         <form onSubmit={handleSubmit} className="mt-8 space-y-6 relative z-10">
-          <div>
-            <motion.input
-              whileFocus={{ scale: 1.01 }}
-              id="username"
-              name="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="input-field"
-              placeholder="Username"
-            />
+          <div className="space-y-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <IconWrapper>{(FaUser as any)({ className: "text-aqua-glow/50" })}</IconWrapper>
+              </div>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                className="input-field pl-10"
+                placeholder="Username"
+              />
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <IconWrapper>{(FaLock as any)({ className: "text-aqua-glow/50" })}</IconWrapper>
+              </div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="input-field pl-10"
+                placeholder="Password"
+              />
+            </div>
           </div>
-          <div>
-            <motion.input
-              whileFocus={{ scale: 1.01 }}
-              id="password"
-              name="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="input-field"
-              placeholder="Password"
-            />
-          </div>
+
           <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={isLoading}
-            className="btn-primary w-full flex items-center justify-center gap-2"
+            className="w-full btn-primary py-3 flex items-center justify-center gap-2"
           >
-            {isLoading ? 'Signing In...' : <><IconWrapper icon={<FaSignInAlt />} /> Sign In</>}
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <IconWrapper>{(FaKey as any)()}</IconWrapper>
+                Sign in
+              </>
+            )}
           </motion.button>
-          <p className="text-center text-ocean-text-light text-md">
+
+          <p className="text-center text-sm text-sea-foam/70">
             Don't have an account?{' '}
-            <Link to="/register" className="font-semibold text-ocean-primary hover:text-ocean-dark transition-colors">
-              Register here <IconWrapper icon={<FaUserPlus className="inline-block ml-1" />} />
+            <Link to="/register" className="text-aqua-glow hover:text-sea-foam transition-colors">
+              Register here
             </Link>
           </p>
         </form>
-      </motion.div>
+      </GlassCard>
     </motion.div>
   );
 };
 
-export default LoginPage;
+export default LoginPage; 

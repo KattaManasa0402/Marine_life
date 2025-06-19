@@ -52,7 +52,7 @@ class MediaItem(MediaItemBase):
     validation_score: int = 0
     is_validated_by_community: bool = False
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True

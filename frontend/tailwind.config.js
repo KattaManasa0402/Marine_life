@@ -6,46 +6,67 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'ocean-base-light': '#EBF7FF',
-        'ocean-light': '#D6EEFF',
-        'ocean-medium': '#A8DADC',
-        'ocean-primary': '#4DB6AC',
-        'ocean-dark': '#00838F',
-        'ocean-text-dark': '#1A334B',
-        'ocean-text-light': '#4A7C9A',
-        'ocean-accent-gold': '#FFD700',
-        'ocean-accent-red': '#EF5350',
-        'glass-light-bg': 'rgba(255, 255, 255, 0.7)',
-        'glass-light-border': 'rgba(255, 255, 255, 0.9)',
-        'gradient-start': '#A8DADC',
-        'gradient-end': '#4DB6AC',
+        'deep-blue': '#001f3f',
+        'wave-blue': '#0077be',
+        'sea-foam': '#e0f7fa',
+        'aqua-glow': '#00e5ff',
+        'coral': '#ff6b6b',
+        'azure': '#0077be',
+        'primary': '#005f73',
+        'primary-focus': '#004c5c',
+        'secondary': '#0a9396',
+        'accent': '#ee9b00',
+        'neutral': '#212529',
+        'base-100': '#0d1117',
+        'info': '#94d2bd',
+        'success': '#198754',
+        'warning': '#ffc107',
+        'error': '#dc3545',
+        'bubble': 'rgba(10, 147, 150, 0.2)',
       },
       fontFamily: {
-        sans: ['"Inter"', 'sans-serif'],
-        heading: ['"Montserrat"', 'sans-serif'],
+        sans: ['"Poppins"', 'sans-serif'],
+        display: ['"Orbitron"', 'sans-serif'],
       },
       backgroundImage: {
-        'gradient-main': 'linear-gradient(180deg, #EBF7FF 0%, #D6EEFF 50%, #A8DADC 100%)',
-        'gradient-hero': 'linear-gradient(225deg, #D6EEFF 0%, #A8DADC 100%)',
+        'ocean-gradient': 'linear-gradient(135deg, #001f3f 0%, #0077be 100%)',
+        'navy-teal-gradient': 'linear-gradient(135deg, #0d1117 0%, #005f73 100%)',
       },
       boxShadow: {
-        'glass-card-shadow': '0 10px 40px rgba(0, 0, 0, 0.05), inset 0 0 10px rgba(255, 255, 255, 0.8)',
-        'button-glow': '0 0 15px rgba(77, 182, 172, 0.4)',
+        'glow': '0 0 15px rgba(0, 229, 255, 0.6)',
+        'deep-glow': '0 0 20px rgba(0, 31, 63, 0.8)',
+        'card': '0 4px 30px rgba(0, 0, 0, 0.1)',
+        'bubble': '0 0 20px rgba(255, 255, 255, 0.1)',
       },
       keyframes: {
-        'fade-in-up': { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-        'scale-in': { '0%': { opacity: '0', transform: 'scale(0.95)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
-        'bubble-float-light': { '0%': { transform: 'translate(calc(-50% + var(--rand-x)), 0vh) scale(0)', opacity: '0' }, '20%': { opacity: '0.6', transform: 'translate(calc(-50% + var(--rand-x)), -20vh) scale(0.8)' }, '100%': { transform: 'translate(calc(-50% + var(--rand-x)), -100vh) scale(1.1)', opacity: '0' } },
-        'caustic-shimmer': { '0%, 100%': { transform: 'scale(1) rotate(0deg)', opacity: '0.1' }, '50%': { transform: 'scale(1.05) rotate(2deg)', opacity: '0.15' } },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+        'pulse-slow': {
+          '0%, 100%': { opacity: '0.8' },
+          '50%': { opacity: '1' },
+        },
+        wave: {
+          '0%': { backgroundPosition: '0% 0%' },
+          '100%': { backgroundPosition: '200% 200%' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
+        },
+        'bubble-float': {
+          '0%': { transform: 'translateY(100vh) scale(0)' },
+          '50%': { transform: 'translateY(50vh) scale(1)' },
+          '100%': { transform: 'translateY(-100vh) scale(0)' }
+        }
       },
       animation: {
-        'fade-in-up': 'fade-in-up 0.6s ease-out forwards',
-        'scale-in': 'scale-in 0.5s ease-out forwards',
-        'bubble-float-1': 'bubble-float-light 10s ease-out infinite 0s',
-        'bubble-float-2': 'bubble-float-light 12s ease-out infinite 2s',
-        'bubble-float-3': 'bubble-float-light 8s ease-out infinite 4s',
-        'bubble-float-4': 'bubble-float-light 11s ease-out infinite 6s',
-        'caustic-shimmer': 'caustic-shimmer 25s ease-in-out infinite alternate',
+        'float': 'float 8s ease-in-out infinite',
+        'pulse-slow': 'pulse-slow 10s ease-in-out infinite',
+        'wave': 'wave 8s linear infinite',
+        'fade-in': 'fade-in 0.5s ease-out forwards',
+        'bubble-float': 'bubble-float 8s linear infinite'
       }
     },
   },
