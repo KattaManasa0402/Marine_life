@@ -145,48 +145,48 @@ const SightingsPage: React.FC = () => {
                         {mediaItems.map((item) => (
                             <motion.div key={item.id} variants={cardVariants} className="group">
                                 <Link to={`/media/${item.id}`}>
-                                    <GlassCard className="p-0 overflow-hidden h-full flex flex-col hover:border-aqua-glow/50 transition-all duration-300 backdrop-blur-md bg-white/5">
-                                        <div className="relative h-60 overflow-hidden">
+                                    <GlassCard className="p-0 overflow-hidden h-full flex flex-col hover:border-aqua-glow/70 transition-all duration-300 backdrop-blur-md bg-gradient-to-br from-sea-foam/30 via-white/10 to-aqua-glow/20 shadow-lg rounded-3xl">
+                                        <div className="relative flex justify-center items-center pt-6 pb-2">
                                             <img 
                                                 src={item.file_url || '/placeholder-marine.png'} 
                                                 alt={item.species_ai_prediction || 'Marine life sighting'} 
-                                                className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                                                className="w-32 h-32 object-cover rounded-full border-4 border-aqua-glow/40 shadow-md bg-white/20 group-hover:scale-105 transition-transform duration-500"
                                             />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                            
-                                            {/* Delete button - only show for user's own items */}
-                                            {user && item.user_id === user.id && (
-                                                <button
-                                                    onClick={(e) => handleDelete(item.id, e)}
-                                                    className="absolute top-3 left-3 bg-red-500/80 hover:bg-red-600/90 text-white p-2 rounded-full text-sm font-semibold flex items-center gap-1.5 backdrop-blur-sm transition-all duration-200 hover:scale-110 z-10"
-                                                    title="Delete this sighting"
-                                                >
-                                                    <IconWrapper>{(FaTrash as any)({ className: "text-xs" })}</IconWrapper>
-                                                </button>
-                                            )}
-                                            
-                                            <div className="absolute bottom-4 left-4 text-white">
-                                                <h3 className="font-bold text-lg drop-shadow-md">{item.validated_species || item.species_ai_prediction || 'Analyzing...'}</h3>
-                                                {item.ai_processing_status === 'pending' && (
-                                                    <p className="text-sm text-white/80 flex items-center gap-1.5 mt-1">
-                                                        <IconWrapper>{(FaSpinner as any)({ className: "animate-spin text-sm" })}</IconWrapper>
-                                                        AI Processing...
-                                                    </p>
-                                                )}
-                                                {item.ai_processing_status === 'failed_queue' && (
-                                                    <p className="text-sm text-red-400/80 flex items-center gap-1.5 mt-1">
-                                                        <IconWrapper>{(FaTriangleExclamation as any)({ className: "text-sm" })}</IconWrapper>
-                                                        AI Failed
-                                                    </p>
-                                                )}
-                                            </div>
+                                            {/* Validation badge */}
                                             {item.is_validated_by_community && (
-                                                <div className="absolute top-3 right-3 bg-green-500/80 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-sm">
+                                                <div className="absolute top-2 right-2 bg-green-400/90 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md flex items-center gap-1.5">
                                                     <IconWrapper>{(FaCircleCheck as any)()}</IconWrapper> Validated
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="p-4 flex flex-col flex-grow">
+                                        <div className="px-6 pb-4 flex flex-col flex-grow">
+                                            <div className="flex flex-wrap gap-2 mb-2">
+                                                {/* AI Species badge */}
+                                                {item.species_ai_prediction && (
+                                                    <span className="inline-block bg-aqua-glow/80 text-white text-xs font-semibold px-3 py-1 rounded-full shadow">
+                                                        {item.species_ai_prediction}
+                                                    </span>
+                                                )}
+                                                {/* AI Health badge */}
+                                                {item.health_status_ai_prediction && (
+                                                    <span className="inline-block bg-sea-foam/70 text-white text-xs font-semibold px-3 py-1 rounded-full shadow">
+                                                        {item.health_status_ai_prediction}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <h3 className="font-bold text-lg text-sea-foam drop-shadow-md mb-1">{item.validated_species || item.species_ai_prediction || 'Analyzing...'}</h3>
+                                            {item.ai_processing_status === 'pending' && (
+                                                <p className="text-sm text-white/80 flex items-center gap-1.5 mt-1">
+                                                    <IconWrapper>{(FaSpinner as any)({ className: "animate-spin text-sm" })}</IconWrapper>
+                                                    AI Processing...
+                                                </p>
+                                            )}
+                                            {item.ai_processing_status === 'failed_queue' && (
+                                                <p className="text-sm text-red-400/80 flex items-center gap-1.5 mt-1">
+                                                    <IconWrapper>{(FaTriangleExclamation as any)({ className: "text-sm" })}</IconWrapper>
+                                                    AI Failed
+                                                </p>
+                                            )}
                                             <p className="text-sm text-white/70 mb-4 flex-grow line-clamp-2">{item.description || 'No description provided.'}</p>
                                             <div className="flex justify-between items-center text-white/80 text-sm mt-auto">
                                                 <span className="flex items-center gap-1.5 font-semibold">

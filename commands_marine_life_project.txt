@@ -16,6 +16,15 @@ cd MinIo
 minio.exe server E:\MinIO\data --console-address ":9001" 
 username: gametestuser
 password: GamePass123!
-
+PostgreSQL: User: marine_user, Password: Password@123
+MinIO: User: minioadmin, Password: minioadmin, Bucket: marine-bucket
+RabbitMQ: User: guest, Password: guest
 Mapbox token- 
 pk.eyJ1IjoibWFubnU3NjciLCJhIjoiY21ia21kcmtuMHRmeTJpcjFubjYwb255OCJ9.qN4lTcT8v0cq6VbhMjLZeQ
+pgAdmin : user - postgres
+password : root
+
+user1
+newpassword123
+hey so 
+check - kattamannu1@gmail.com accounts google ai for preparing it

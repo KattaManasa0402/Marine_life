@@ -41,7 +41,7 @@ async def submit_or_update_validation_vote(
     previous_vote = await crud.crud_validation_vote.get_vote_by_media_and_user(db, media_item_id, current_user.id)
     
     # Step 1: Create or update the vote record in the database
-    vote_record = await crud.crud_validation_vote.create_or_update_validation_vote(
+    vote_data = await crud.crud_validation_vote.create_or_update_validation_vote(
         db=db, media_item_id=media_item_id, user_id=current_user.id, vote_in=vote_in
     )
     
@@ -55,7 +55,7 @@ async def submit_or_update_validation_vote(
             db=db, user=current_user, points=POINTS_FOR_VALIDATION_VOTE
         )
 
-    return vote_record
+    return schemas.ValidationVote(**vote_data)
 
 @router.get(
     "/media/{media_item_id}/validations",

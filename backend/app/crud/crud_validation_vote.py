@@ -40,7 +40,7 @@ async def create_or_update_validation_vote(
     media_item_id: int, 
     user_id: int, 
     vote_in: Union[ValidationVoteCreate, ValidationVoteUpdate]
-) -> ValidationVoteModel:
+) -> dict:
     existing_vote = await get_vote_by_media_and_user(db, media_item_id, user_id)
 
     if existing_vote:
@@ -52,7 +52,7 @@ async def create_or_update_validation_vote(
         db.add(existing_vote)
         await db.commit()
         await db.refresh(existing_vote)
-        return existing_vote
+        vote_record = existing_vote
     else:
         new_vote_data = vote_in.model_dump()
         db_vote = ValidationVoteModel(
@@ -63,7 +63,22 @@ async def create_or_update_validation_vote(
         db.add(db_vote)
         await db.commit()
         await db.refresh(db_vote)
-        return db_vote
+        vote_record = db_vote
+
+    # Eagerly load all fields into a dict
+    vote_data = {
+        "id": vote_record.id,
+        "media_item_id": vote_record.media_item_id,
+        "user_id": vote_record.user_id,
+        "vote_on_species": vote_record.vote_on_species,
+        "corrected_species_name": vote_record.corrected_species_name,
+        "vote_on_health": vote_record.vote_on_health,
+        "corrected_health_status": vote_record.corrected_health_status,
+        "comment": vote_record.comment,
+        "created_at": vote_record.created_at,
+        "updated_at": vote_record.updated_at,
+    }
+    return vote_data
 
 async def delete_validation_vote(db: AsyncSession, vote_id: int) -> Optional[ValidationVoteModel]:
     db_vote = await get_validation_vote(db, vote_id)
