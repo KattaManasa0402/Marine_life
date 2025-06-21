@@ -41,8 +41,13 @@ const MediaDetailPage: React.FC = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-6xl mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-8">
-                        <GlassCard className="p-0 overflow-hidden">
-                            <img src={mediaItem.file_url} alt={mediaItem.species_ai_prediction || 'Marine Life'} className="w-full h-auto object-cover" />
+                        <GlassCard className="p-0 overflow-hidden flex justify-center items-center bg-white/5">
+                            <img 
+                                src={mediaItem.file_url} 
+                                alt={mediaItem.species_ai_prediction || 'Marine Life'} 
+                                className="max-w-[400px] max-h-[350px] w-full h-auto object-cover rounded-2xl shadow-lg border-4 border-aqua-glow/30 bg-white/10 m-4"
+                                style={{ objectFit: 'cover' }}
+                            />
                         </GlassCard>
 
                         <GlassCard className="p-6">

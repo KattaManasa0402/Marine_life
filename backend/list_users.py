@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import os
+from sqlalchemy import text
 
 # Add the project root to the path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -14,7 +15,9 @@ async def list_all_users():
     async with AsyncSessionLocal() as db:
         try:
             # Get all users
-            result = await db.execute("SELECT id, username, email, is_active, is_superuser, created_at FROM users ORDER BY created_at DESC")
+            result = await db.execute(
+                text("SELECT id, username, email, is_active, is_superuser, created_at FROM users ORDER BY created_at DESC")
+            )
             users = result.fetchall()
             
             if not users:

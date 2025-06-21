@@ -1,0 +1,35 @@
+# PostgreSQL Database Configuration
+POSTGRES_SERVER=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=marine_user
+POSTGRES_PASSWORD=Password@123
+POSTGRES_DB=marine_db_v2
+
+# MinIO Object Storage Configuration
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET_NAME=marine-bucket
+MINIO_USE_SSL=false
+MINIO_SECURE=false
+
+# Redis Configuration (for Celery results)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# RabbitMQ Configuration (for Celery broker)
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=guest
+
+# Google AI Configuration
+GOOGLE_API_KEY=your_google_api_key_here
+
+# JWT Authentication Configuration
+SECRET_KEY=your_secret_key_here_make_it_long_and_random
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Debug Configuration
+DEBUG_AI_MOCK=true 

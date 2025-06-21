@@ -84,6 +84,18 @@ async def read_own_media_items(
     )
     return media_items
 
+# --- DEVELOPMENT ONLY: List all users (remove in production) ---
+@router.get("/admin/list", response_model=List[schemas.User], summary="List all users (development only)")
+async def list_all_users(db: AsyncSession = Depends(get_db)):
+    """
+    DEVELOPMENT ONLY: List all users in the database.
+    This should be removed in production for security reasons.
+    """
+    from sqlalchemy.future import select
+    result = await db.execute(select(UserModel).order_by(UserModel.created_at.desc()))
+    users = result.scalars().all()
+    return users
+
 # --- NEW PUBLIC ENDPOINT TO FETCH A USER'S PUBLIC PROFILE ---
 @router.get("/{user_id}", response_model=schemas.User, summary="Get a user's public profile")
 async def get_user_profile(user_id: int, db: AsyncSession = Depends(get_db)):
