@@ -12,7 +12,7 @@ import UploadPage from './pages/UploadPage';
 import ProfilePage from './pages/ProfilePage';
 import MediaDetailPage from './pages/MediaDetailPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-
+import SightingsPage from './pages/SightingsPage';
 function App() {
   return (
     <Router>
@@ -36,6 +36,7 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/map" element={<MapPage />} />
+              <Route path="/sightings" element={<SightingsPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/media/:id" element={<MediaDetailPage />} />

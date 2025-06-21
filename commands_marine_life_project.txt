@@ -1,0 +1,21 @@
+cd.. 
+cd.. 
+E:
+cd Marine_life  
+cd backend  
+venv\Scripts\activate 
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000  
+minio.exe server E:\MinIO\data --console-address ":9001" 
+celery -A app.celery_app.celery_app worker -l info -P solo
+psql -U marine_user -d marine_db -W
+SELECT id, original_filename, species_ai_prediction, health_status_ai_prediction, ai_confidence_score, ai_model_version, ai_processing_status, created_at, updated_at FROM media_items WHERE id = <new_id>;
+cd.. 
+cd.. 
+E:
+cd MinIo
+minio.exe server E:\MinIO\data --console-address ":9001" 
+username: gametestuser
+password: GamePass123!
+
+Mapbox token- 
+pk.eyJ1IjoibWFubnU3NjciLCJhIjoiY21ia21kcmtuMHRmeTJpcjFubjYwb255OCJ9.qN4lTcT8v0cq6VbhMjLZeQ

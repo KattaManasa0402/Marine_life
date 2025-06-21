@@ -71,7 +71,6 @@ async def upload_media(
 async def list_media(db: AsyncSession = Depends(get_db), skip: int = 0, limit: int = 100):
     media_items = await crud.crud_media.get_media_items(db, skip, limit)
     logger.info(f"Retrieved {len(media_items)} media items for listing.")
-    logger.info(f"Media items: {[item.dict() for item in media_items]}") # Log the actual items
     return media_items
 
 @router.get("/{item_id}", response_model=schemas.MediaItem)
@@ -84,3 +83,13 @@ async def get_media(item_id: int, db: AsyncSession = Depends(get_db)):
 @router.get("/user/{user_id}", response_model=List[schemas.MediaItem])
 async def list_user_media(user_id: int, db: AsyncSession = Depends(get_db)):
     return await crud.crud_media.get_media_items_by_user(db=db, user_id=user_id)
+
+@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_media(item_id: int, db: AsyncSession = Depends(get_db), current_user: UserModel = Depends(security.get_current_active_user)):
+    item = await crud.crud_media.get_media_item(db, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Media item not found")
+    if item.user_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this media item")
+    await crud.crud_media.delete_media_item(db, item_id)
+    return

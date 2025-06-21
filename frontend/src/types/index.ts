@@ -5,7 +5,7 @@ export interface User {
   is_active: boolean;
   is_superuser: boolean;
   score: number; // Added score
-  badges: string[]; // Renamed from earned_badges for consistency
+  earned_badges: string[]; // This now matches the backend model
   created_at: string;
   updated_at: string;
 }
@@ -23,10 +23,9 @@ export interface MediaItem {
   ai_model_version: string | null;
   ai_processing_status: 'pending' | 'completed' | 'failed' | 'failed_queue';
   validated_species: string | null;
-  validated_health: string | null; // Corrected from validated_health_status
-  community_votes_up: number;
-  community_votes_down: number;
-  is_community_validated: boolean; // Added this field
+  validated_health_status: string | null; // This now matches the backend model
+  validation_score: number; // This now matches the backend model
+  is_validated_by_community: boolean; // This now matches the backend model
   created_at: string;
   updated_at: string;
   owner: User; 
@@ -37,8 +36,8 @@ export interface MapDataPoint {
   latitude: number;
   longitude: number;
   file_url: string;
-  species_prediction: string | null;
-  health_prediction: string | null;
+  species_prediction: string | null; // This is a legacy/simplified name for the map
+  health_prediction: string | null; // This is a legacy/simplified name for the map
   validated_species: string | null;
-  validated_health: string | null;
+  validated_health: string | null; // Corrected from validated_health_status for map component
 }

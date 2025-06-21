@@ -4,10 +4,12 @@ import { MediaItem } from '../types';
 import { Link } from 'react-router-dom';
 import Spinner from '../components/common/Spinner';
 import { motion } from 'framer-motion';
-import { FaHeart, FaEye, FaCircleCheck, FaTriangleExclamation, FaSpinner, FaThumbsUp, FaThumbsDown, FaArrowRotateRight } from 'react-icons/fa6';
+import { FaHeart, FaEye, FaCircleCheck, FaTriangleExclamation, FaSpinner, FaThumbsUp, FaThumbsDown, FaArrowRotateRight, FaTrash } from 'react-icons/fa6';
 import GlassCard from '../components/common/GlassCard';
 import IconWrapper from '../utils/IconWrapper';
 import OceanBackground from '../components/common/OceanBackground';
+import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 // Bubble component for the ocean effect
 const Bubble: React.FC<{ delay: number; size: number; left: number }> = ({ delay, size, left }) => (
@@ -35,6 +37,7 @@ const SightingsPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const { user } = useAuth();
 
     const fetchMediaItems = useCallback(async () => {
         setLoading(true);
@@ -56,6 +59,25 @@ const SightingsPage: React.FC = () => {
 
     const handleRefresh = () => {
         setRefreshTrigger(prev => prev + 1);
+    };
+
+    const handleDelete = async (itemId: number, e: React.MouseEvent) => {
+        e.preventDefault(); // Prevent navigation to detail page
+        e.stopPropagation();
+        
+        if (!window.confirm('Are you sure you want to delete this sighting? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await api.delete(`/media/${itemId}`);
+            toast.success('Sighting deleted successfully');
+            // Remove the item from the local state
+            setMediaItems(prev => prev.filter(item => item.id !== itemId));
+        } catch (err) {
+            console.error('Failed to delete media item:', err);
+            toast.error('Failed to delete sighting. Please try again.');
+        }
     };
 
     if (loading) {
@@ -131,6 +153,18 @@ const SightingsPage: React.FC = () => {
                                                 className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                            
+                                            {/* Delete button - only show for user's own items */}
+                                            {user && item.user_id === user.id && (
+                                                <button
+                                                    onClick={(e) => handleDelete(item.id, e)}
+                                                    className="absolute top-3 left-3 bg-red-500/80 hover:bg-red-600/90 text-white p-2 rounded-full text-sm font-semibold flex items-center gap-1.5 backdrop-blur-sm transition-all duration-200 hover:scale-110 z-10"
+                                                    title="Delete this sighting"
+                                                >
+                                                    <IconWrapper>{(FaTrash as any)({ className: "text-xs" })}</IconWrapper>
+                                                </button>
+                                            )}
+                                            
                                             <div className="absolute bottom-4 left-4 text-white">
                                                 <h3 className="font-bold text-lg drop-shadow-md">{item.validated_species || item.species_ai_prediction || 'Analyzing...'}</h3>
                                                 {item.ai_processing_status === 'pending' && (
@@ -146,7 +180,7 @@ const SightingsPage: React.FC = () => {
                                                     </p>
                                                 )}
                                             </div>
-                                            {item.is_community_validated && (
+                                            {item.is_validated_by_community && (
                                                 <div className="absolute top-3 right-3 bg-green-500/80 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-sm">
                                                     <IconWrapper>{(FaCircleCheck as any)()}</IconWrapper> Validated
                                                 </div>
@@ -156,10 +190,8 @@ const SightingsPage: React.FC = () => {
                                             <p className="text-sm text-white/70 mb-4 flex-grow line-clamp-2">{item.description || 'No description provided.'}</p>
                                             <div className="flex justify-between items-center text-white/80 text-sm mt-auto">
                                                 <span className="flex items-center gap-1.5 font-semibold">
-                                                    <IconWrapper>{(FaThumbsUp as any)({ className: "text-green-400" })}</IconWrapper> {item.community_votes_up}
-                                                </span>
-                                                <span className="flex items-center gap-1.5 font-semibold">
-                                                    <IconWrapper>{(FaThumbsDown as any)({ className: "text-red-400" })}</IconWrapper> {item.community_votes_down}
+                                                    <IconWrapper>{(FaCircleCheck as any)({ className: "text-aqua-glow" })}</IconWrapper>
+                                                    Validation Score: {item.validation_score}
                                                 </span>
                                                 <span className="flex items-center gap-1.5 text-aqua-glow font-semibold group-hover:text-white transition-colors">
                                                     <IconWrapper>{(FaEye as any)()}</IconWrapper> View Details
