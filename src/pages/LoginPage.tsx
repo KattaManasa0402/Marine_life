@@ -1,1 +1,0 @@
-import IconWrapper from '../utils/IconWrapper'; 
