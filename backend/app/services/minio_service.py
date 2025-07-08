@@ -8,28 +8,11 @@ from app.core.config import settings
 def initialize_minio_client():
     """
     Initializes and returns the MinIO client, also ensures the bucket exists.
+    
+    NOTE: Temporarily disabled for Render deployment until a cloud storage solution is configured.
     """
-    try:
-        print(f"Attempting to initialize MinIO client for endpoint: {settings.MINIO_ENDPOINT}...")
-        client = Minio(
-            endpoint=settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            secure=settings.MINIO_USE_SSL
-        )
-        # Check if the connection is working by checking for the bucket's existence
-        bucket_exists = client.bucket_exists(settings.MINIO_BUCKET_NAME)
-        if not bucket_exists:
-            print(f"Bucket '{settings.MINIO_BUCKET_NAME}' not found. Creating it now.")
-            client.make_bucket(settings.MINIO_BUCKET_NAME)
-        else:
-            print(f"Bucket '{settings.MINIO_BUCKET_NAME}' already exists in MinIO.")
-        
-        print(f"MinIO client initialized successfully for endpoint: {settings.MINIO_ENDPOINT}")
-        return client
-    except Exception as e:
-        print(f"FATAL: MinIO client initialization failed: {e}")
-        return None
+    print("MinIO initialization is currently disabled for deployment.")
+    return None # This is the crucial change.
 
 # Initialize the client when this module is loaded
 minio_client: Optional[Minio] = initialize_minio_client()
