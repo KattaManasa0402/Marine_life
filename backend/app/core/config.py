@@ -1,69 +1,86 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
 
-# This class now defines the expected settings.
-# The actual values will be loaded automatically from the .env file.
-# We remove the hardcoded default values for all secrets.
+# This class defines all expected settings.
+# Pydantic will automatically load values from environment variables.
+# For local development, it will also load them from the .env file.
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Community Marine Life Monitoring Platform API"
     API_V1_STR: str = "/api/v1"
-    DEBUG: bool = True
-
-    # --- PostgreSQL Database ---
-    POSTGRES_SERVER: str
-    POSTGRES_PORT: int
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
     
-    # This @property is a clean way to build the URL from other settings
-    @property
-    def DATABASE_URL(self) -> str:
-        # Note: We use asyncpg for the asynchronous driver
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-
-    # --- MinIO Object Storage ---
+    # --- RENDER DEPLOYMENT SETTINGS ---
+    # These single URLs are provided by Render's environment.
+    # They are optional because they won't exist in your local .env file.
+    DATABASE_URL: Optional[str] = None
+    REDIS_URL: Optional[str] = None
+    
+    # --- LOCAL DEVELOPMENT SETTINGS ---
+    # These will be used ONLY if DATABASE_URL and REDIS_URL are not set.
+    POSTGRES_SERVER: Optional[str] = None
+    POSTGRES_PORT: Optional[int] = None
+    POSTGRES_USER: Optional[str] = None
+    POSTGRES_PASSWORD: Optional[str] = None
+    POSTGRES_DB: Optional[str] = None
+    REDIS_HOST: Optional[str] = None
+    REDIS_PORT: Optional[int] = None
+    
+    # --- MINIO OBJECT STORAGE (Placeholders for now) ---
     MINIO_ENDPOINT: str
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
     MINIO_BUCKET_NAME: str
-    MINIO_USE_SSL: bool = False
-    MINIO_SECURE: bool = False
+    MINIO_USE_SSL: bool = True # Set to True for cloud services
 
-    # --- Redis Cache (for Celery results) ---
-    REDIS_HOST: str
-    REDIS_PORT: int
+    # --- RABBITMQ (We will set this up later) ---
+    RABBITMQ_HOST: Optional[str] = "localhost" # Placeholder
+    RABBITMQ_PORT: Optional[int] = 5672       # Placeholder
+    RABBITMQ_USER: Optional[str] = "guest"     # Placeholder
+    RABBITMQ_PASSWORD: Optional[str] = "guest" # Placeholder
 
-    # --- RabbitMQ (Celery Broker) ---
-    RABBITMQ_HOST: str
-    RABBITMQ_PORT: int
-    RABBITMQ_USER: str
-    RABBITMQ_PASSWORD: str
-    
-    @property
-    def CELERY_BROKER_URL(self) -> str:
-        return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}//"
-    
-    @property
-    def CELERY_RESULT_BACKEND(self) -> str:
-        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
-        
-    # --- Google AI ---
+    # --- GOOGLE AI & JWT AUTHENTICATION ---
     GOOGLE_API_KEY: str
-
-    # --- JWT Authentication ---
     SECRET_KEY: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-    # New setting for AI mock data
-    DEBUG_AI_MOCK: bool = False
+    # --- @property methods now intelligently decide which variables to use ---
 
-    # CORS Origins (adjust in production)
+    @property
+    def ASYNC_DATABASE_URL(self) -> str:
+        """
+        Provides the correct SQLAlchemy URL for async connections.
+        - Uses the RENDER `DATABASE_URL` if available.
+        - Otherwise, builds it from local settings.
+        - Ensures the driver is `postgresql+asyncpg`.
+        """
+        if self.DATABASE_URL:
+            # Render provides a "postgres://" URL, we must make it compatible.
+            return self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
+        else:
+            # Fallback for local development
+            return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
-    # This allows pydantic to look for a .env file
+    @property
+    def CELERY_BROKER_URL(self) -> str:
+        # TODO: This will need to be updated with a cloud AMQP service URL later.
+        return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}//"
+    
+    @property
+    def CELERY_RESULT_BACKEND(self) -> str:
+        """
+        Provides the correct Redis URL for Celery.
+        - Uses the RENDER `REDIS_URL` if available.
+        - Otherwise, builds it from local settings.
+        """
+        if self.REDIS_URL:
+            return self.REDIS_URL
+        else:
+            return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+
     class Config:
         env_file = ".env"
+        env_file_encoding = 'utf-8'
 
 # The lru_cache decorator creates a singleton-like pattern for the settings
 @lru_cache()
