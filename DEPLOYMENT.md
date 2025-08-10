@@ -26,9 +26,12 @@ In Railway dashboard, add these environment variables:
 ```
 DEBUG=False
 GOOGLE_API_KEY=your-actual-api-key
-SECRET_KEY=your-super-secret-key
+SECRET_KEY=your-super-secret-key-here
 DATABASE_URL=postgresql://... (Railway provides this)
 REDIS_URL=redis://... (Railway provides this)
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-key
+CLOUDINARY_API_SECRET=your-cloudinary-secret
 ```
 
 ### Step 4: Deploy Frontend

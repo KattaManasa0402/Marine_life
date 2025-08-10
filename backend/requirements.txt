@@ -13,13 +13,6 @@ alembic==1.16.1
 greenlet==3.2.2
 
 # Celery and Task Queue
-celery==5.4.0
-redis==5.0.8
-billiard==4.2.1
-kombu==5.5.4
-vine==5.1.0
-amqp==5.3.1
-
 # Authentication and Security
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
@@ -27,8 +20,6 @@ email_validator==2.2.0
 
 # # MinIO Object Storage
 # minio==7.2.8
-# ... all your other requirements
-cloudinary==1.40.0
 
 # Google AI and Image Handling
 google-generativeai==0.7.1
@@ -38,6 +29,3 @@ Pillow==10.4.0
 # Utilities
 python-dotenv==1.1.0
 python-multipart==0.0.20
-
-# ... all your other requirements
-honcho==1.1.0

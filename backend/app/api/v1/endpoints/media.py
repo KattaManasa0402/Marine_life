@@ -3,17 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import logging
 
-# NEW/REQUIRED IMPORT for the fix
-from app.celery_app import celery_app
-
 from app import schemas, crud
 from app.db.database import get_db
 from app.core import security
 from app.models.user import User as UserModel
 from app.services.media_storage_service import upload_file_to_storage
-from app.tasks.ai_tasks import process_media_with_gemini
+from app.services.ai_service import analyze_image_with_gemini
 
-# Set up logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -32,53 +28,26 @@ async def upload_media(
         if not file_url:
             raise HTTPException(status_code=500, detail="File could not be uploaded to storage.")
     except Exception as e:
-        # Corrected log message to reflect Cloudinary
         logger.error(f"Cloudinary upload failed: {e}")
         raise HTTPException(status_code=503, detail="Storage service is currently unavailable.")
 
-    # Prepare data for CRUD operation
     media_data = {
-        "file_url": file_url,
-        "original_filename": file.filename,
-        "content_type": file.content_type,
-        "file_size_bytes": file.size,
-        "latitude": latitude,
-        "longitude": longitude,
-        "description": description,
-        "ai_processing_status": "pending" # Explicitly set status
+        "file_url": file_url, "original_filename": file.filename, "content_type": file.content_type,
+        "file_size_bytes": file.size, "latitude": latitude, "longitude": longitude,
+        "description": description, "ai_processing_status": "processing"
     }
-    
-    # Create the media item record in the database
     item = await crud.crud_media.create_media_item(db=db, media_item_data=media_data, user_id=current_user.id)
     
-    # --- FIX FOR CONNECTION RELIABILITY ---
-    # Use a 'with' block to get a fresh connection from the pool and ensure it's closed.
-    try:
-        with celery_app.connection() as connection:
-            process_media_with_gemini.apply_async(
-                args=[item.id, item.file_url],
-                connection=connection,
-                # Optional: add retries for the task itself
-                retry=True,
-                retry_policy={
-                    'max_retries': 3,
-                    'interval_start': 10,
-                }
-            )
-        logger.info(f"Successfully dispatched AI task for media item {item.id}")
-    except Exception as e:
-        # Log the error, but the user's upload is already safe.
-        logger.error(f"Failed to dispatch Celery task for media item {item.id}. Error: {e}")
-        # Optionally, update the item's status to 'failed_to_queue'
-        item.ai_processing_status = "failed_queue"
-        db.add(item)
-        await db.commit()
-    # --- END FIX ---
+    ai_results = analyze_image_with_gemini(item.file_url)
 
-    # Award points for uploading
+    for key, value in ai_results.items():
+        setattr(item, key, value)
+    db.add(item)
+    await db.commit()
+    await db.refresh(item)
+
     await crud.crud_user.add_score_and_check_badges(db, user=current_user, points=10)
     
-    await db.refresh(item)
     return item
 
 @router.get("/", response_model=List[schemas.MediaItem])
