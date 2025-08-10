@@ -20,31 +20,39 @@ class Settings(BaseSettings):
         if self.DATABASE_URL:
             return self.DATABASE_URL
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-    # MINIO_ENDPOINT: str = "localhost:9000"
-    # MINIO_ACCESS_KEY: str = "minioadmin"
-    # MINIO_SECRET_KEY: str = "minioadmin"
-    # MINIO_BUCKET_NAME: str = "marine-bucket"
-    # MINIO_USE_SSL: bool = False
+    
+    # Storage Configuration
     CLOUDINARY_CLOUD_NAME: str
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
+    
+    # Queue Configuration
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     RABBITMQ_HOST: str = "localhost"
     RABBITMQ_PORT: int = 5672
     RABBITMQ_USER: str = "guest"
     RABBITMQ_PASSWORD: str = "guest"
+    
     @property
     def CELERY_BROKER_URL(self) -> str:
         return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}//"
+    
     @property
     def CELERY_RESULT_BACKEND(self) -> str:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
-    GOOGLE_API_KEY: str = "AIzaSyCaFYt4ApZtBjKnqWFLTcCoFfMlCy8DcU4"
+    
+    # AI Configuration
+    GOOGLE_API_KEY: str  # Will load from environment variable
     DEBUG_AI_MOCK: bool = False
-    SECRET_KEY: str = "3a7c9f2b8e1d0a6f5c4b3e2d1a0b9c8d7e6f5a4b3c2d1e0f"
+    
+    # Security Configuration
+    SECRET_KEY: str  # Will load from environment variable
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
+
+    class Config:
+        env_file = ".env"
 
 @lru_cache()
 def get_settings() -> Settings:
