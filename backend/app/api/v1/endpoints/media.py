@@ -11,7 +11,8 @@ from app.db.database import get_db
 from app.core import security
 from app.models.user import User as UserModel
 from app.services.media_storage_service import upload_file_to_storage
-from app.tasks.ai_tasks import process_media_with_gemini
+# We don't need to import the task directly anymore, as we'll call it by name
+# from app.tasks.ai_tasks import process_media_with_gemini
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -50,19 +51,27 @@ async def upload_media(
     # Create the media item record in the database
     item = await crud.crud_media.create_media_item(db=db, media_item_data=media_data, user_id=current_user.id)
     
-    # --- ROBUST TASK DISPATCHING ---
+    # --- SOLUTION: USE A CELERY PRODUCER FOR RELIABLE DISPATCH ---
     try:
-        # Use a 'with' block to get a fresh connection from the pool
-        with celery_app.connection() as connection:
-            process_media_with_gemini.apply_async(
-                args=[item.id, item.file_url],
-                connection=connection
+        # This block acquires a fresh connection from the pool for this specific task.
+        with celery_app.producer_pool.acquire(block=True) as producer:
+            producer.publish(
+                (item.id, item.file_url),  # Arguments for the task as a tuple
+                serializer='json',
+                exchange='celery',
+                routing_key='celery',
+                task='app.tasks.ai_tasks.process_media_with_gemini', # The full path to the task function
+                retry=True,
+                retry_policy={
+                    'max_retries': 3,
+                    'interval_start': 0,
+                    'interval_step': 0.2,
+                    'interval_max': 0.5,
+                }
             )
-        logger.info(f"Successfully dispatched AI task for media item {item.id}")
+        logger.info(f"Successfully dispatched Celery task for media item {item.id} using a producer.")
     except Exception as e:
-        # Log the error, but the user's upload is already safe.
         logger.error(f"Failed to dispatch Celery task for media item {item.id}. Error: {e}")
-        # Optionally, update the item's status to 'failed_to_queue'
         item.ai_processing_status = "failed_queue"
         db.add(item)
         await db.commit()
