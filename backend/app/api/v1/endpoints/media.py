@@ -3,6 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import logging
 
+# Required import for the fix
+from app.celery_app import celery_app
+
 from app import schemas, crud
 from app.db.database import get_db
 from app.core import security
@@ -21,15 +24,15 @@ async def upload_media(
     db: AsyncSession = Depends(get_db),
     file: UploadFile = File(...),
     latitude: Optional[float] = Form(None),
-    longitude: Optional[float] = Form(None), # Changed from str to float
+    longitude: Optional[float] = Form(None),
     description: Optional[str] = Form(None)
 ):
     try:
-        file_url = await  upload_file_to_storage(file)
+        file_url = await upload_file_to_storage(file)
         if not file_url:
             raise HTTPException(status_code=500, detail="File could not be uploaded to storage.")
     except Exception as e:
-        logger.error(f"MinIO upload failed: {e}")
+        logger.error(f"Cloudinary upload failed: {e}")
         raise HTTPException(status_code=503, detail="Storage service is currently unavailable.")
 
     # Prepare data for CRUD operation
@@ -47,10 +50,14 @@ async def upload_media(
     # Create the media item record in the database
     item = await crud.crud_media.create_media_item(db=db, media_item_data=media_data, user_id=current_user.id)
     
-    # --- FIX IS HERE ---
-    # Try to dispatch the AI task, but don't fail the entire request if the task queue is down.
+    # --- ROBUST TASK DISPATCHING ---
     try:
-        process_media_with_gemini.delay(item.id, item.file_url)
+        # Use a 'with' block to get a fresh connection from the pool
+        with celery_app.connection() as connection:
+            process_media_with_gemini.apply_async(
+                args=[item.id, item.file_url],
+                connection=connection
+            )
         logger.info(f"Successfully dispatched AI task for media item {item.id}")
     except Exception as e:
         # Log the error, but the user's upload is already safe.
@@ -59,7 +66,7 @@ async def upload_media(
         item.ai_processing_status = "failed_queue"
         db.add(item)
         await db.commit()
-    # --- END FIX ---
+    # --- END OF FIX ---
 
     # Award points for uploading
     await crud.crud_user.add_score_and_check_badges(db, user=current_user, points=10)

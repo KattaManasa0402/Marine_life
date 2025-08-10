@@ -20,15 +20,17 @@ kombu==5.5.4
 vine==5.1.0
 amqp==5.3.1
 
-# Authentication and Security
+# Process Manager
+honcho==1.1.0
+
+# Authentication and Security (with specific bcrypt version)
 passlib==1.7.4
 bcrypt==3.2.0
+
 python-jose[cryptography]==3.3.0
 email_validator==2.2.0
 
-# # MinIO Object Storage
-# minio==7.2.8
-# ... all your other requirements
+# Cloudinary Storage
 cloudinary==1.40.0
 
 # Google AI and Image Handling
@@ -39,6 +41,3 @@ Pillow==10.4.0
 # Utilities
 python-dotenv==1.1.0
 python-multipart==0.0.20
-
-# ... all your other requirements
-honcho==1.1.0
