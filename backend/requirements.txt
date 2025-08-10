@@ -38,3 +38,6 @@ Pillow==10.4.0
 # Utilities
 python-dotenv==1.1.0
 python-multipart==0.0.20
+
+# ... all your other requirements
+honcho==1.1.0
