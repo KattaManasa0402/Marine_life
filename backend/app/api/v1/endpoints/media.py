@@ -11,6 +11,8 @@ from app.db.database import get_db
 from app.core import security
 from app.models.user import User as UserModel
 from app.services.media_storage_service import upload_file_to_storage
+# Import the task so we can call .apply_async on it
+from app.tasks.ai_tasks import process_media_with_gemini
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -43,27 +45,22 @@ async def upload_media(
         "latitude": latitude,
         "longitude": longitude,
         "description": description,
-        "ai_processing_status": "pending"
+        "ai_processing_status": "pending" # Explicitly set status
     }
     
     # Create the media item record in the database
     item = await crud.crud_media.create_media_item(db=db, media_item_data=media_data, user_id=current_user.id)
     
-    # --- FINAL FIX: USE producer.send_task FOR CORRECT FORMATTING ---
+    # --- FINAL FIX: Use apply_async with a managed connection ---
     try:
-        with celery_app.producer_pool.acquire(block=True) as producer:
-            producer.send_task(
-                'app.tasks.ai_tasks.process_media_with_gemini', # The name of the task
-                args=[item.id, item.file_url], # Arguments for the task
-                exchange='celery',
-                routing_key='celery',
-                retry=True,
-                retry_policy={
-                    'max_retries': 3,
-                    'interval_start': 10,
-                }
+        # This gets a fresh connection from the pool for writing (sending) a task.
+        with celery_app.connection_for_write() as connection:
+            process_media_with_gemini.apply_async(
+                args=[item.id, item.file_url],
+                connection=connection,
+                retry=True
             )
-        logger.info(f"Successfully dispatched Celery task for media item {item.id} using a producer.")
+        logger.info(f"Successfully dispatched Celery task for media item {item.id}.")
     except Exception as e:
         logger.error(f"Failed to dispatch Celery task for media item {item.id}. Error: {e}")
         item.ai_processing_status = "failed_queue"
