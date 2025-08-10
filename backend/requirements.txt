@@ -21,7 +21,8 @@ vine==5.1.0
 amqp==5.3.1
 
 # Authentication and Security
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
+bcrypt==3.2.0
 python-jose[cryptography]==3.3.0
 email_validator==2.2.0
 
