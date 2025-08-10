@@ -7,7 +7,7 @@ from app import schemas, crud
 from app.db.database import get_db
 from app.core import security
 from app.models.user import User as UserModel
-from app.services import upload_file_to_minio
+from app.services.media_storage_service import upload_file_to_storage
 from app.tasks.ai_tasks import process_media_with_gemini
 
 # Set up logging
@@ -25,7 +25,7 @@ async def upload_media(
     description: Optional[str] = Form(None)
 ):
     try:
-        file_url = await upload_file_to_minio(file)
+        file_url = await  upload_file_to_storage(file)
         if not file_url:
             raise HTTPException(status_code=500, detail="File could not be uploaded to storage.")
     except Exception as e:

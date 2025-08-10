@@ -1,0 +1,185 @@
+Internal Database URL-
+postgresql://marine_db_i2uz_user:Rhtqk0v1wJCH9K8nd3eCbMDN9Z54P4P2@dpg-d1mhro2li9vc739katk0-a/marine_db_i2uz
+
+Internal Key Value URL
+redis://red-d1243gjuibrs73eqlf90:6379
+
+Secret Key
+4afb262fab75a3cf2c953bd48deac1ea96ea5ba48e0e15c4f31990d7243b4f97 
+
+old minio_service.py
+from minio import Minio
+from io import BytesIO
+from fastapi import UploadFile
+import uuid
+from typing import Optional
+from app.core.config import settings
+
+def initialize_minio_client():
+    """
+    Initializes and returns the MinIO client, also ensures the bucket exists.
+    """
+    try:
+        print(f"Attempting to initialize MinIO client for endpoint: {settings.MINIO_ENDPOINT}...")
+        client = Minio(
+            endpoint=settings.MINIO_ENDPOINT,
+            access_key=settings.MINIO_ACCESS_KEY,
+            secret_key=settings.MINIO_SECRET_KEY,
+            secure=settings.MINIO_USE_SSL
+        )
+        # Check if the connection is working by checking for the bucket's existence
+        bucket_exists = client.bucket_exists(settings.MINIO_BUCKET_NAME)
+        if not bucket_exists:
+            print(f"Bucket '{settings.MINIO_BUCKET_NAME}' not found. Creating it now.")
+            client.make_bucket(settings.MINIO_BUCKET_NAME)
+        else:
+            print(f"Bucket '{settings.MINIO_BUCKET_NAME}' already exists in MinIO.")
+        
+        print(f"MinIO client initialized successfully for endpoint: {settings.MINIO_ENDPOINT}")
+        return client
+    except Exception as e:
+        print(f"FATAL: MinIO client initialization failed: {e}")
+        return None
+
+# Initialize the client when this module is loaded
+minio_client: Optional[Minio] = initialize_minio_client()
+
+async def upload_file_to_minio(file: UploadFile) -> Optional[str]:
+    """
+    Uploads a file to the configured MinIO bucket and returns its public URL.
+    """
+    if not minio_client:
+        print("ERROR: MinIO client is not available. Cannot upload file.")
+        return None
+    
+    try:
+        content = await file.read()
+        # Create a unique object name using UUID and the original file extension
+        file_extension = file.filename.split('.')[-1] if '.' in file.filename else ''
+        object_name = f"uploads/{uuid.uuid4().hex}.{file_extension}"
+
+        # Upload the object
+        minio_client.put_object(
+            bucket_name=settings.MINIO_BUCKET_NAME,
+            object_name=object_name,
+            data=BytesIO(content),
+            length=len(content),
+            content_type=file.content_type
+        )
+        
+        # Construct the public URL
+        protocol = "https" if settings.MINIO_USE_SSL else "http"
+        file_url = f"{protocol}://{settings.MINIO_ENDPOINT}/{settings.MINIO_BUCKET_NAME}/{object_name}"
+        
+        print(f"Successfully uploaded {file.filename} to {file_url}")
+        return file_url
+    except Exception as e:
+        print(f"ERROR: An exception occurred during MinIO upload: {e}")
+        return None
+---------------------------------------------------------------
+core/config.py 
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+# This class now defines the expected settings.
+# The actual values will be loaded automatically from the .env file.
+# We remove the hardcoded default values for all secrets.
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "Community Marine Life Monitoring Platform API"
+    API_V1_STR: str = "/api/v1"
+    DEBUG: bool = True
+
+    # --- PostgreSQL Database ---
+    POSTGRES_SERVER: str
+    POSTGRES_PORT: int
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+    
+    # This @property is a clean way to build the URL from other settings
+    @property
+    def DATABASE_URL(self) -> str:
+        # Note: We use asyncpg for the asynchronous driver
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+
+    # --- MinIO Object Storage ---
+    MINIO_ENDPOINT: str
+    MINIO_ACCESS_KEY: str
+    MINIO_SECRET_KEY: str
+    MINIO_BUCKET_NAME: str
+    MINIO_USE_SSL: bool = False
+    MINIO_SECURE: bool = False
+
+    # --- Redis Cache (for Celery results) ---
+    REDIS_HOST: str
+    REDIS_PORT: int
+
+    # --- RabbitMQ (Celery Broker) ---
+    RABBITMQ_HOST: str
+    RABBITMQ_PORT: int
+    RABBITMQ_USER: str
+    RABBITMQ_PASSWORD: str
+    
+    @property
+    def CELERY_BROKER_URL(self) -> str:
+        return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}//"
+    
+    @property
+    def CELERY_RESULT_BACKEND(self) -> str:
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+        
+    # --- Google AI ---
+    GOOGLE_API_KEY: str
+
+    # --- JWT Authentication ---
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
+    # New setting for AI mock data
+    DEBUG_AI_MOCK: bool = False
+
+    # CORS Origins (adjust in production)
+
+    # This allows pydantic to look for a .env file
+    class Config:
+        env_file = ".env"
+
+# The lru_cache decorator creates a singleton-like pattern for the settings
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()
+
+# Global settings object to be used throughout the application
+settings = get_settings()
+
+----------------------------------
+database.py
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from app.core.config import settings
+from .base import Base  # <-- IMPORT Base FROM THE NEW FILE
+
+# The engine and session setup remains the same.
+engine = create_async_engine(settings.DATABASE_URL)
+AsyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
+
+# We no longer define Base here. We import it.
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
+
+# This function is no longer needed since Alembic handles table creation.
+# It can be safely removed.
+# async def create_db_and_tables():
+#     async with engine.begin() as conn:
+#         await conn.run_sync(Base.metadata.create_all)
+
+------------------------
+CLOUDAMQP
+TEAM NAME 
+marine-monitoring
+-------
+AMQP URL 
+amqps://sznehxlo:Ub8kD0CNfw5b951EoIc0jK57bzq8xhU7@armadillo.rmq.cloudamqp.com/sznehxlo

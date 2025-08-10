@@ -158,6 +158,16 @@ const SightingsPage: React.FC = () => {
                                                     <IconWrapper>{(FaCircleCheck as any)()}</IconWrapper> Validated
                                                 </div>
                                             )}
+                                            {/* Delete button for own sightings or superusers */}
+                                            {user && (item.user_id === user.id || user.is_superuser) && (
+                                                <button
+                                                    onClick={(e) => handleDelete(item.id, e)}
+                                                    className="absolute top-2 left-2 bg-red-500/90 hover:bg-red-600/90 text-white p-2 rounded-full text-xs shadow-md transition-colors z-10"
+                                                    title={user.is_superuser ? "Delete this sighting (Superuser)" : "Delete this sighting"}
+                                                >
+                                                    <IconWrapper>{(FaTrash as any)()}</IconWrapper>
+                                                </button>
+                                            )}
                                         </div>
                                         <div className="px-6 pb-4 flex flex-col flex-grow">
                                             <div className="flex flex-wrap gap-2 mb-2">
