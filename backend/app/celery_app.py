@@ -12,10 +12,15 @@ celery_app = Celery(
     include=["app.tasks.ai_tasks"]
 )
 
+# --- NEW CONFIGURATION FOR ROBUSTNESS ---
 celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    # These settings help with connection reliability
+    broker_connection_retry_on_startup=True,
+    broker_pool_limit=1, # Can prevent connection limit issues on free tiers
 )
+# --- END NEW CONFIGURATION ---
