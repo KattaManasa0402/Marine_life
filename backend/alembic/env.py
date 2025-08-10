@@ -80,13 +80,6 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# Add the project's root directory to the Python path
-# This allows us to import from 'app'
-sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..')))
-
-from app.core.config import settings
-from app.db.base import Base  # Import your SQLAlchemy Base
-
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -96,30 +89,30 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# --- THIS IS THE CRUCIAL FIX ---
-# Set the SQLAlchemy URL from our application settings, which reads from the environment variables
-# We replace 'asyncpg' with 'psycopg2' because Alembic runs synchronously.
-sync_db_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2")
-config.set_main_option("sqlalchemy.url", sync_db_url)
-# --- END OF FIX ---
+# Add the project's root directory to the Python path
+# This allows us to import from 'app'
+sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..')))
+
+from app.db.base import Base  # Import your SQLAlchemy Base
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
+def get_url():
+    """Constructs the database URL directly from environment variables."""
+    user = os.getenv("POSTGRES_USER")
+    password = os.getenv("POSTGRES_PASSWORD")
+    server = os.getenv("POSTGRES_SERVER")
+    port = os.getenv("POSTGRES_PORT")
+    db = os.getenv("POSTGRES_DB")
+    
+    # Alembic needs a synchronous driver, so we use 'psycopg2'
+    return f"postgresql+psycopg2://{user}:{password}@{server}:{port}/{db}"
+
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
-    url = config.get_main_option("sqlalchemy.url")
+    """Run migrations in 'offline' mode."""
+    url = get_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -132,14 +125,13 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
+    """Run migrations in 'online' mode."""
+    # This section is now simplified to use get_url()
+    configuration = config.get_section(config.config_ini_section)
+    configuration["sqlalchemy.url"] = get_url()
+    
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
