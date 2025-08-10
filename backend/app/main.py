@@ -22,7 +22,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-origins = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"]
+origins = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001","https://marine-life-frontend.onrender.com" ]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
